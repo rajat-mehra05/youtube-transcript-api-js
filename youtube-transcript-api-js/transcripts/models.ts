@@ -11,6 +11,30 @@ import {
 } from '../errors';
 
 /**
+ * Parses the Retry-After header value which can be either seconds or an HTTP-date
+ */
+function parseRetryAfter(retryAfter: string | undefined): number | undefined {
+  if (!retryAfter) {
+    return undefined;
+  }
+
+  // First, try parsing as an integer (seconds)
+  const seconds = parseInt(retryAfter, 10);
+  if (!isNaN(seconds)) {
+    return seconds;
+  }
+
+  // Try parsing as an HTTP-date
+  const dateMs = Date.parse(retryAfter);
+  if (!isNaN(dateMs)) {
+    const secondsUntil = Math.ceil((dateMs - Date.now()) / 1000);
+    return secondsUntil > 0 ? secondsUntil : undefined;
+  }
+
+  return undefined;
+}
+
+/**
  * Wraps axios errors with contextual error classes
  */
 function wrapNetworkError(error: unknown, url: string, videoId: string): never {
@@ -21,7 +45,7 @@ function wrapNetworkError(error: unknown, url: string, videoId: string): never {
 
       if (status === 429) {
         const retryAfter = error.response.headers['retry-after'];
-        const retryAfterSeconds = retryAfter ? parseInt(retryAfter, 10) : undefined;
+        const retryAfterSeconds = parseRetryAfter(retryAfter);
         throw new RateLimitExceeded(videoId, retryAfterSeconds);
       }
     }

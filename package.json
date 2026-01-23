@@ -34,15 +34,15 @@
     "webvtt",
     "json"
   ],
-  "author": "Pavan Reddy",
+  "author": "Rajat Mehra",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/playzone/youtube-transcript-api-js.git"
+    "url": "https://github.com/rajat-mehra05/youtube-transcript-api-js.git"
   },
-  "homepage": "https://github.com/playzone/youtube-transcript-api-js#readme",
+  "homepage": "https://github.com/rajat-mehra05/youtube-transcript-api-js#readme",
   "bugs": {
-    "url": "https://github.com/playzone/youtube-transcript-api-js/issues"
+    "url": "https://github.com/rajat-mehra05/youtube-transcript-api-js/issues"
   },
   "dependencies": {
     "axios": "^1.6.0",
