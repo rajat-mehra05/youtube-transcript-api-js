@@ -249,3 +249,53 @@ export class TranscriptParseError extends YouTubeTranscriptApiException {
     this.originalError = originalError;
   }
 }
+
+export class RateLimitExceeded extends CouldNotRetrieveTranscript {
+  public readonly retryAfter: number | undefined;
+
+  constructor(videoId: string, retryAfter?: number) {
+    super(videoId);
+    this.name = 'RateLimitExceeded';
+    this.retryAfter = retryAfter;
+  }
+
+  protected getCause(): string {
+    const retryMessage = this.retryAfter
+      ? ` Try again after ${this.retryAfter} seconds.`
+      : '';
+    return `YouTube is rate limiting your requests.${retryMessage} ` +
+           'You have made too many requests in a short period of time.';
+  }
+}
+
+export class NetworkError extends YouTubeTranscriptApiException {
+  public readonly code: string | undefined;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'NetworkError';
+    this.code = code;
+  }
+}
+
+export class TimeoutError extends NetworkError {
+  public readonly url: string;
+  public readonly timeoutMs: number;
+
+  constructor(url: string, timeoutMs: number) {
+    super(`Request to ${url} timed out after ${timeoutMs}ms`, 'ETIMEDOUT');
+    this.name = 'TimeoutError';
+    this.url = url;
+    this.timeoutMs = timeoutMs;
+  }
+}
+
+export class ConnectionError extends NetworkError {
+  public readonly url: string;
+
+  constructor(url: string, code: string) {
+    super(`Failed to connect to ${url}: ${code}`, code);
+    this.name = 'ConnectionError';
+    this.url = url;
+  }
+}
