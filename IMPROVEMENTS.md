@@ -121,6 +121,8 @@ export class ConnectionError extends NetworkError {
 - [x] Fix string errors in models.ts
 - [x] Add unhandled rejection handler in CLI
 - [x] Fix silent exit on conflicting CLI options
+- [x] Fix global side effect on import (unhandledRejection handler)
+- [x] Remove CLI exports from library entry point
 
 ### Phase 2: Validation & Error Context
 - [x] Add video ID validation

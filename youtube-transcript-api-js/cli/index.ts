@@ -240,12 +240,11 @@ export async function main(): Promise<void> {
   }
 }
 
-process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled Rejection:', reason);
-  process.exit(1);
-});
-
 // Run if called directly
 if (require.main === module) {
+  process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
+    process.exit(1);
+  });
   main();
 }

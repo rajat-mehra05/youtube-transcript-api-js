@@ -111,7 +111,9 @@ export class YouTubeTranscriptApi {
     if (trimmed === '') {
       throw new InvalidVideoId('');
     }
-    if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
+    // Case-insensitive URL detection - reject URLs, defer other validation to API
+    const lowerCased = trimmed.toLowerCase();
+    if (lowerCased.includes('youtube.com') || lowerCased.includes('youtu.be')) {
       throw new InvalidVideoId(trimmed);
     }
     return trimmed;

@@ -59,8 +59,5 @@ export {
   InvidiousOptions
 } from './proxies';
 
-// CLI exports
-export { YouTubeTranscriptCli, main } from './cli';
-
 // Default export
 export { default } from './api';
