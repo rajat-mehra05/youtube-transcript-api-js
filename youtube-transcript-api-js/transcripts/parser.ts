@@ -1,5 +1,6 @@
 import { parseString } from 'xml2js';
 import { FetchedTranscriptSnippet } from './models';
+import { TranscriptParseError } from '../errors';
 
 /**
  * HTML formatting tags that can be preserved
@@ -51,7 +52,10 @@ export class TranscriptParser {
 
       return snippets;
     } catch (error) {
-      throw new Error(`Failed to parse transcript XML: ${error}`);
+      throw new TranscriptParseError(
+        `Failed to parse transcript XML: ${error}`,
+        error instanceof Error ? error : undefined
+      );
     }
   }
 

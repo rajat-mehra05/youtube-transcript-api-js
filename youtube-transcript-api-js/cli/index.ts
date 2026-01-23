@@ -104,8 +104,11 @@ export class YouTubeTranscriptCli {
       }
 
       if (options.excludeManuallyCreated && options.excludeGenerated) {
-        console.log('');
-        return;
+        console.error(
+          'Error: Cannot use both --exclude-manually-created and --exclude-generated together.\n' +
+          'This would exclude all transcripts.'
+        );
+        process.exit(1);
       }
 
       const proxyConfig = this.createProxyConfig(options);
@@ -237,12 +240,11 @@ export async function main(): Promise<void> {
   }
 }
 
-process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled Rejection:', reason);
-  process.exit(1);
-});
-
 // Run if called directly
 if (require.main === module) {
+  process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
+    process.exit(1);
+  });
   main();
 }

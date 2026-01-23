@@ -4,83 +4,9 @@ This document lists all identified issues and improvements for the youtube-trans
 
 ---
 
-## Critical Issues (Must Fix)
-
-### 1. Silent Exit on Conflicting CLI Options
-**File:** `youtube-transcript-api-js/cli/index.ts` (lines 106-108)
-
-**Problem:** Using both `--exclude-manually-created` and `--exclude-generated` produces empty output silently.
-
-```typescript
-if (options.excludeManuallyCreated && options.excludeGenerated) {
-  console.log('');  // Silent empty output!
-  return;
-}
-```
-
-**Fix:**
-```typescript
-if (options.excludeManuallyCreated && options.excludeGenerated) {
-  console.error(
-    'Error: Cannot use both --exclude-manually-created and --exclude-generated together.\n' +
-    'This would exclude all transcripts.'
-  );
-  process.exit(1);
-}
-```
-
----
-
 ## Medium Severity Issues
 
-### 5. Missing Input Validation for Video IDs
-**File:** `youtube-transcript-api-js/api/index.ts` (lines 105-120)
-
-**Problem:** No validation of `videoId` parameter before passing to fetcher.
-
-**Fix:** Add validation function:
-```typescript
-function validateVideoId(videoId: string | null | undefined): string {
-  if (!videoId || typeof videoId !== 'string') {
-    throw new InvalidVideoId(String(videoId));
-  }
-  const trimmed = videoId.trim();
-  if (trimmed === '') {
-    throw new InvalidVideoId('');
-  }
-  if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
-    throw new InvalidVideoId(trimmed);
-  }
-  return trimmed;
-}
-```
-
----
-
-### 6. Generic Error Wrapping in Parser
-**File:** `youtube-transcript-api-js/transcripts/parser.ts`
-
-**Problem:** XML parsing errors wrapped in generic `Error`, losing type information.
-
-```typescript
-catch (error) {
-  throw new Error(`Failed to parse transcript XML: ${error}`);
-}
-```
-
-**Fix:** Create and use `TranscriptParseError` class:
-```typescript
-export class TranscriptParseError extends YouTubeTranscriptApiException {
-  constructor(message: string, public readonly originalError?: Error) {
-    super(message);
-    this.name = 'TranscriptParseError';
-  }
-}
-```
-
----
-
-### 7. No Rate Limiting (429) Handling
+### 1. No Rate Limiting (429) Handling
 **File:** `youtube-transcript-api-js/transcripts/fetcher.ts`
 
 **Problem:** No specific handling for HTTP 429 status codes.
@@ -97,7 +23,7 @@ export class RateLimitExceeded extends CouldNotRetrieveTranscript {
 
 ---
 
-### 8. Network Errors Not Contextually Wrapped
+### 2. Network Errors Not Contextually Wrapped
 **File:** `youtube-transcript-api-js/transcripts/fetcher.ts`
 
 **Problem:** HTTP errors from axios propagate without video context or helpful messaging.
@@ -123,14 +49,14 @@ export class ConnectionError extends NetworkError { ... }
 | Proxy configs | 0 tests | Missing |
 | Integration tests | 0 tests | Missing |
 
-### 9. Add HTTP Mocking Infrastructure
+### 3. Add HTTP Mocking Infrastructure
 **Required:** Add `axios-mock-adapter` to devDependencies
 
 ```bash
 npm install --save-dev axios-mock-adapter
 ```
 
-### 10. Missing Test Files to Create
+### 4. Missing Test Files to Create
 
 - `__tests__/errors.test.ts` - Test all 14 error classes
 - `__tests__/parser.test.ts` - Test XML parsing edge cases
@@ -146,13 +72,6 @@ npm install --save-dev axios-mock-adapter
 Add to `youtube-transcript-api-js/errors/index.ts`:
 
 ```typescript
-export class TranscriptParseError extends YouTubeTranscriptApiException {
-  constructor(message: string, public readonly originalError?: Error) {
-    super(message);
-    this.name = 'TranscriptParseError';
-  }
-}
-
 export class RateLimitExceeded extends CouldNotRetrieveTranscript {
   constructor(videoId: string, public readonly retryAfter?: number) {
     super(videoId);
@@ -188,13 +107,9 @@ export class ConnectionError extends NetworkError {
 
 | Edge Case | Current Behavior | Expected Behavior |
 |-----------|------------------|-------------------|
-| Empty video ID | Passes to YouTube, fails later | Throw `InvalidVideoId` immediately |
-| Null/undefined video ID | TypeError | Throw `InvalidVideoId` |
-| URL instead of ID | Detected in fetcher | Detect earlier in API |
 | Empty language array | May cause issues | Use default `['en']` or throw |
 | HTTP 429 (rate limit) | Generic error | Throw `RateLimitExceeded` |
 | Connection timeout | Generic error | Throw `TimeoutError` |
-| Malformed XML response | Generic error | Throw `TranscriptParseError` |
 | Empty transcript (0 snippets) | Unknown | Handle gracefully |
 
 ---
@@ -205,11 +120,13 @@ export class ConnectionError extends NetworkError {
 - [x] Fix silent error swallowing in proxy config
 - [x] Fix string errors in models.ts
 - [x] Add unhandled rejection handler in CLI
-- [ ] Fix silent exit on conflicting CLI options
+- [x] Fix silent exit on conflicting CLI options
+- [x] Fix global side effect on import (unhandledRejection handler)
+- [x] Remove CLI exports from library entry point
 
 ### Phase 2: Validation & Error Context
-- [ ] Add video ID validation
-- [ ] Create TranscriptParseError class
+- [x] Add video ID validation
+- [x] Create TranscriptParseError class
 - [ ] Add rate limiting detection
 - [ ] Wrap network errors with context
 
