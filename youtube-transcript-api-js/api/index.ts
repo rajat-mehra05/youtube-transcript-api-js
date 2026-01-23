@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { TranscriptListFetcher } from '../transcripts/fetcher';
 import { TranscriptList, FetchedTranscript } from '../transcripts/models';
 import { ProxyConfig } from '../proxies';
-import { InvalidProxyUrl } from '../errors';
+import { InvalidProxyUrl, InvalidVideoId } from '../errors';
 
 /**
  * Main YouTube Transcript API class
@@ -101,6 +101,23 @@ export class YouTubeTranscriptApi {
   }
 
   /**
+   * Validate video ID format
+   */
+  private validateVideoId(videoId: string | null | undefined): string {
+    if (!videoId || typeof videoId !== 'string') {
+      throw new InvalidVideoId(String(videoId));
+    }
+    const trimmed = videoId.trim();
+    if (trimmed === '') {
+      throw new InvalidVideoId('');
+    }
+    if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
+      throw new InvalidVideoId(trimmed);
+    }
+    return trimmed;
+  }
+
+  /**
    * Fetch transcript for a single video (shortcut method)
    */
   async fetch(
@@ -108,7 +125,8 @@ export class YouTubeTranscriptApi {
     languages: string[] = ['en'],
     preserveFormatting: boolean = false
   ): Promise<FetchedTranscript> {
-    const transcriptList = await this.list(videoId);
+    const validatedId = this.validateVideoId(videoId);
+    const transcriptList = await this.list(validatedId);
     const transcript = transcriptList.findTranscript(languages);
     return transcript.fetch(preserveFormatting);
   }
@@ -117,7 +135,8 @@ export class YouTubeTranscriptApi {
    * Get list of available transcripts for a video
    */
   async list(videoId: string): Promise<TranscriptList> {
-    return this.fetcher.fetch(videoId);
+    const validatedId = this.validateVideoId(videoId);
+    return this.fetcher.fetch(validatedId);
   }
 }
 

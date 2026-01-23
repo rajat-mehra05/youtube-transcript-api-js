@@ -239,3 +239,13 @@ export class InvalidProxyUrl extends YouTubeTranscriptApiException {
     this.name = 'InvalidProxyUrl';
   }
 }
+
+export class TranscriptParseError extends YouTubeTranscriptApiException {
+  public readonly originalError: Error | undefined;
+
+  constructor(message: string, originalError?: Error) {
+    super(message);
+    this.name = 'TranscriptParseError';
+    this.originalError = originalError;
+  }
+}
