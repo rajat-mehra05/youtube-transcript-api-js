@@ -13,12 +13,14 @@
 - Renamed package from `@rajat-mehra/youtube-transcript-api-js` to `youtube-transcript-api-js`
 
 **Migration:** Update your imports and package.json dependency:
+
 ```bash
 npm uninstall @rajat-mehra/youtube-transcript-api-js
 npm install youtube-transcript-api-js
 ```
 
 Then update all imports:
+
 ```typescript
 // Before
 import { YouTubeTranscriptApi } from '@rajat-mehra/youtube-transcript-api-js';
