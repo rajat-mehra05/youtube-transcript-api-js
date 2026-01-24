@@ -1,10 +1,10 @@
 # youtube-transcript-api-js
 
-## 3.0.0
+## 2.0.1
 
-### Major Changes
+### Patch Changes
 
-- be6e33a: update package name with imports
+- Updated publish workflow and release script
 
 ## 2.0.0
 
