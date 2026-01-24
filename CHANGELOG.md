@@ -1,8 +1,8 @@
 # youtube-transcript-api-js
 
-## 1.2.1
+## 2.0.0
 
-### Patch Changes
+### Major Changes
 
 - Renamed package from `@rajat-mehra/youtube-transcript-api-js` to `youtube-transcript-api-js`
 
