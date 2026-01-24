@@ -1,5 +1,11 @@
 # youtube-transcript-api-js
 
+## 2.0.1
+
+### Patch Changes
+
+- Updated publish workflow and release script
+
 ## 2.0.0
 
 ### Major Changes
