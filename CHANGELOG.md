@@ -1,4 +1,4 @@
-# @rajat-mehra/youtube-transcript-api-js
+# youtube-transcript-api-js
 
 ## 1.2.0
 
