@@ -86,7 +86,7 @@ export const VIDEO_PAGE_HTML = `
       }
     }
   };
-  var INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
+  var INNERTUBE_API_KEY = "TEST_INNERTUBE_API_KEY_PLACEHOLDER";
 </script>
 </body>
 </html>`;
