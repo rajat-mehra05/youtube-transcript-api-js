@@ -1,5 +1,11 @@
 # youtube-transcript-api-js
 
+## 2.1.0
+
+### Minor Changes
+
+- 63d05cf: update package-lock.json
+
 ## 2.0.2
 
 ### Patch Changes
