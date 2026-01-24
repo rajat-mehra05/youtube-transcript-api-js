@@ -7,19 +7,19 @@ A lightweight JavaScript/TypeScript library for retrieving transcripts and subti
 ## Installation
 
 ```bash
-npm install @rm/youtube-transcript-api-js
+npm install @rajat-mehra/youtube-transcript-api-js
 ```
 
 Or with yarn:
 
 ```bash
-yarn add @rm/youtube-transcript-api-js
+yarn add @rajat-mehra/youtube-transcript-api-js
 ```
 
 ## Quick Start
 
 ```typescript
-import { YouTubeTranscriptApi } from '@rm/youtube-transcript-api-js';
+import { YouTubeTranscriptApi } from '@rajat-mehra/youtube-transcript-api-js';
 
 const api = new YouTubeTranscriptApi();
 
@@ -37,7 +37,7 @@ console.log(transcript.snippets);
 The main class for fetching transcripts.
 
 ```typescript
-import { YouTubeTranscriptApi } from '@rm/youtube-transcript-api-js';
+import { YouTubeTranscriptApi } from '@rajat-mehra/youtube-transcript-api-js';
 
 const api = new YouTubeTranscriptApi();
 ```
@@ -174,7 +174,7 @@ youtube-transcript-api dQw4w9WgXcQ --exclude-generated --format json
 Format transcripts in different output formats.
 
 ```typescript
-import { FormatterLoader, SRTFormatter } from '@rm/youtube-transcript-api-js';
+import { FormatterLoader, SRTFormatter } from '@rajat-mehra/youtube-transcript-api-js';
 
 const transcript = await api.fetch('VIDEO_ID');
 
@@ -201,7 +201,7 @@ console.log(srtFormatter.formatTranscript(transcript));
 ### Generic Proxy
 
 ```typescript
-import { YouTubeTranscriptApi, GenericProxyConfig } from '@rm/youtube-transcript-api-js';
+import { YouTubeTranscriptApi, GenericProxyConfig } from '@rajat-mehra/youtube-transcript-api-js';
 
 const proxyConfig = new GenericProxyConfig(
   'http://user:pass@proxy.example.com:8080',  // HTTP
@@ -216,7 +216,7 @@ const api = new YouTubeTranscriptApi(proxyConfig);
 For rotating residential proxies via [Webshare](https://www.webshare.io/).
 
 ```typescript
-import { YouTubeTranscriptApi, WebshareProxyConfig } from '@rm/youtube-transcript-api-js';
+import { YouTubeTranscriptApi, WebshareProxyConfig } from '@rajat-mehra/youtube-transcript-api-js';
 
 const proxyConfig = new WebshareProxyConfig(
   'your-username',
@@ -233,7 +233,7 @@ const api = new YouTubeTranscriptApi(proxyConfig);
 For advanced use cases with Invidious fallback support.
 
 ```typescript
-import { EnhancedYouTubeTranscriptApi } from '@rm/youtube-transcript-api-js';
+import { EnhancedYouTubeTranscriptApi } from '@rajat-mehra/youtube-transcript-api-js';
 
 const api = new EnhancedYouTubeTranscriptApi(
   {
@@ -261,7 +261,7 @@ import {
   RateLimitExceeded,
   TimeoutError,
   ConnectionError
-} from '@rm/youtube-transcript-api-js';
+} from '@rajat-mehra/youtube-transcript-api-js';
 
 try {
   const transcript = await api.fetch('VIDEO_ID');
