@@ -1,6 +1,6 @@
 {
   "name": "@rajat-mehra/youtube-transcript-api-js",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A lightweight JavaScript API for retrieving transcripts and subtitles from YouTube videos. Works with both manual and auto-generated captions without requiring API keys or browser automation tools like Selenium.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -64,6 +64,7 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.8",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.9.0",
     "@types/xml2js": "^0.4.14",

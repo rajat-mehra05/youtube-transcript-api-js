@@ -59,5 +59,3 @@ export {
   InvidiousOptions
 } from './proxies';
 
-// Default export
-export { default } from './api';
