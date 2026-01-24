@@ -3,9 +3,20 @@
   "version": "1.0.1",
   "description": "A lightweight JavaScript API for retrieving transcripts and subtitles from YouTube videos. Works with both manual and auto-generated captions without requiring API keys or browser automation tools like Selenium.",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "sideEffects": false,
   "scripts": {
-    "build": "tsc && cp youtube-transcript-api-js/cli.js dist/",
+    "build": "tsup && cp youtube-transcript-api-js/cli.js dist/",
+    "build:tsc": "tsc && cp youtube-transcript-api-js/cli.js dist/",
     "dev": "tsc --watch",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -62,6 +73,7 @@
     "jest": "^29.7.0",
     "prettier": "^3.1.0",
     "ts-jest": "^29.1.1",
+    "tsup": "^8.5.1",
     "typescript": "^5.2.2"
   },
   "engines": {
