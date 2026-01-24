@@ -1,5 +1,11 @@
 # youtube-transcript-api-js
 
+## 2.0.2
+
+### Patch Changes
+
+- 1851e58: update workflow and bump version
+
 ## 2.0.1
 
 ### Patch Changes
