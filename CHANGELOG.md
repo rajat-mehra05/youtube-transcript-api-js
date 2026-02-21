@@ -1,5 +1,20 @@
 # youtube-transcript-api-js
 
+## 2.2.0
+
+### New Features
+
+- **VideoMetadata threading**: Video metadata (`videoDetails`) from the Innertube API response is now threaded through `TranscriptList`, `Transcript`, and `FetchedTranscript` via an optional `metadata` field.
+- **`getVideoMetadata()` returns real data**: `EnhancedYouTubeTranscriptApi.getVideoMetadata()` returns actual video metadata from the Innertube API instead of hardcoded stub values.
+- **`TimestampedTextFormatter`**: New LLM-friendly formatter producing `[M:SS] text` output with optional `groupBySeconds` bucketing. Use via `FormatterLoader.load('timestamped')`.
+- **`VideoMetadataResult` export**: Explicit interface for the return type of `getVideoMetadata()`.
+
+### Bug Fixes
+
+- **Proxy config wired to base API**: `EnhancedYouTubeTranscriptApi` proxy options are now correctly passed to the underlying `YouTubeTranscriptApi` via `EnhancedProxyConfig`. Previously silently ignored.
+- **ESM-compatible imports**: Replaced `require('http')` / `require('https')` with ESM imports to prevent bundler breakage.
+- **`getVideoMetadata()` throws `YouTubeTranscriptApiException`** instead of bare `Error` for correct `instanceof` handling.
+
 ## 2.0.2
 
 ### Patch Changes
