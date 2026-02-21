@@ -1,5 +1,6 @@
 import { EnhancedYouTubeTranscriptApi } from '../enhanced-api';
 import { YouTubeTranscriptApi } from '../api';
+import { YouTubeTranscriptApiException } from '../errors';
 import axios from 'axios';
 
 // Mock dependencies
@@ -295,30 +296,185 @@ describe('EnhancedYouTubeTranscriptApi', () => {
   });
 
   describe('getVideoMetadata', () => {
-    it('should return basic video metadata', async () => {
-      const api = new EnhancedYouTubeTranscriptApi();
+    it('should return mapped metadata from baseApi.list()', async () => {
+      const mockBaseApi = {
+        fetch: jest.fn(),
+        list: jest.fn().mockResolvedValue({
+          metadata: {
+            videoId: 'test123',
+            title: 'Test Video',
+            lengthSeconds: '300',
+            channelId: 'UCtest',
+            shortDescription: 'A test description',
+            thumbnail: { thumbnails: [] },
+            viewCount: '12345',
+            author: 'Test Author',
+            isLiveContent: false,
+          },
+        }),
+      };
 
+      (YouTubeTranscriptApi as jest.Mock).mockImplementation(() => mockBaseApi);
+
+      const api = new EnhancedYouTubeTranscriptApi();
       const metadata = await api.getVideoMetadata('test123');
 
+      expect(mockBaseApi.list).toHaveBeenCalledWith('test123');
       expect(metadata).toEqual({
         id: 'test123',
-        title: 'Video Title',
-        description: 'Video Description',
-        author: 'Video Author',
-        channelId: 'channel_id',
-        lengthSeconds: 0,
-        viewCount: 0,
+        title: 'Test Video',
+        description: 'A test description',
+        author: 'Test Author',
+        channelId: 'UCtest',
+        lengthSeconds: 300,
+        viewCount: 12345,
         isPrivate: false,
         isLiveContent: false,
       });
     });
 
-    it('should return metadata with provided video ID', async () => {
+    it('should throw YouTubeTranscriptApiException when metadata is undefined', async () => {
+      const mockBaseApi = {
+        fetch: jest.fn(),
+        list: jest.fn().mockResolvedValue({ metadata: undefined }),
+      };
+
+      (YouTubeTranscriptApi as jest.Mock).mockImplementation(() => mockBaseApi);
+
       const api = new EnhancedYouTubeTranscriptApi();
 
-      const metadata = await api.getVideoMetadata('customVideoId');
+      await expect(api.getVideoMetadata('test123')).rejects.toThrow(
+        YouTubeTranscriptApiException
+      );
+      await expect(api.getVideoMetadata('test123')).rejects.toThrow(
+        'Could not retrieve metadata for video: test123'
+      );
+    });
 
-      expect(metadata.id).toBe('customVideoId');
+    it('should use fallback values for missing fields', async () => {
+      const mockBaseApi = {
+        fetch: jest.fn(),
+        list: jest.fn().mockResolvedValue({
+          metadata: {
+            videoId: 'test123',
+            title: '',
+            lengthSeconds: '',
+            channelId: '',
+            shortDescription: '',
+            thumbnail: { thumbnails: [] },
+            viewCount: '',
+            author: '',
+            isLiveContent: undefined,
+          },
+        }),
+      };
+
+      (YouTubeTranscriptApi as jest.Mock).mockImplementation(() => mockBaseApi);
+
+      const api = new EnhancedYouTubeTranscriptApi();
+      const metadata = await api.getVideoMetadata('test123');
+
+      expect(metadata.title).toBe('');
+      expect(metadata.description).toBe('');
+      expect(metadata.author).toBe('');
+      expect(metadata.channelId).toBe('');
+      expect(metadata.lengthSeconds).toBe(0);
+      expect(metadata.viewCount).toBe(0);
+      expect(metadata.isLiveContent).toBe(false);
+    });
+
+    it('should fall back to argument videoId when metadata.videoId is missing', async () => {
+      const mockBaseApi = {
+        fetch: jest.fn(),
+        list: jest.fn().mockResolvedValue({
+          metadata: {
+            videoId: '',
+            title: 'Some Video',
+            lengthSeconds: '60',
+            channelId: 'UC123',
+            shortDescription: '',
+            thumbnail: { thumbnails: [] },
+            viewCount: '0',
+            author: 'Author',
+            isLiveContent: false,
+          },
+        }),
+      };
+
+      (YouTubeTranscriptApi as jest.Mock).mockImplementation(() => mockBaseApi);
+
+      const api = new EnhancedYouTubeTranscriptApi();
+      const metadata = await api.getVideoMetadata('myVideoId');
+
+      expect(metadata.id).toBe('myVideoId');
+    });
+
+    it('should propagate errors from baseApi.list()', async () => {
+      const mockBaseApi = {
+        fetch: jest.fn(),
+        list: jest.fn().mockRejectedValue(new Error('Video unavailable')),
+      };
+
+      (YouTubeTranscriptApi as jest.Mock).mockImplementation(() => mockBaseApi);
+
+      const api = new EnhancedYouTubeTranscriptApi();
+
+      await expect(api.getVideoMetadata('test123')).rejects.toThrow('Video unavailable');
+    });
+  });
+
+  describe('proxy wiring to base API', () => {
+    it('should pass EnhancedProxyConfig to base API when proxy is enabled', () => {
+      new EnhancedYouTubeTranscriptApi({
+        enabled: true,
+        http: 'http://proxy.example.com:8080',
+      });
+
+      expect(YouTubeTranscriptApi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({
+            enabled: true,
+            http: 'http://proxy.example.com:8080',
+          }),
+        })
+      );
+    });
+
+    it('should not pass proxy config to base API when proxy is disabled', () => {
+      new EnhancedYouTubeTranscriptApi({ enabled: false });
+
+      expect(YouTubeTranscriptApi).toHaveBeenCalledWith();
+    });
+
+    it('should re-create base API when setProxyOptions is called with proxy enabled', () => {
+      const api = new EnhancedYouTubeTranscriptApi();
+      (YouTubeTranscriptApi as jest.Mock).mockClear();
+
+      api.setProxyOptions({
+        enabled: true,
+        http: 'http://newproxy.example.com:8080',
+      });
+
+      expect(YouTubeTranscriptApi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({
+            enabled: true,
+            http: 'http://newproxy.example.com:8080',
+          }),
+        })
+      );
+    });
+
+    it('should re-create base API without proxy when setProxyOptions disables proxy', () => {
+      const api = new EnhancedYouTubeTranscriptApi({
+        enabled: true,
+        http: 'http://proxy.example.com:8080',
+      });
+      (YouTubeTranscriptApi as jest.Mock).mockClear();
+
+      api.setProxyOptions({ enabled: false });
+
+      expect(YouTubeTranscriptApi).toHaveBeenCalledWith();
     });
   });
 

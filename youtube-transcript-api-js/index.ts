@@ -2,7 +2,7 @@
 export { YouTubeTranscriptApi, createYouTubeTranscriptApi } from './api';
 
 // Enhanced API exports
-export { EnhancedYouTubeTranscriptApi } from './enhanced-api';
+export { EnhancedYouTubeTranscriptApi, VideoMetadataResult } from './enhanced-api';
 
 // Data model exports
 export {
@@ -10,7 +10,8 @@ export {
   FetchedTranscriptSnippet,
   Transcript,
   TranscriptList,
-  TranslationLanguage
+  TranslationLanguage,
+  VideoMetadata
 } from './transcripts/models';
 
 // Error exports
@@ -44,6 +45,7 @@ export {
   TextFormatter,
   SRTFormatter,
   WebVTTFormatter,
+  TimestampedTextFormatter,
   FormatterLoader
 } from './formatters';
 

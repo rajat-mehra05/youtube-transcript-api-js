@@ -73,6 +73,21 @@ function wrapNetworkError(error: unknown, url: string, videoId: string): never {
 }
 
 /**
+ * Video metadata extracted from the Innertube API response
+ */
+export interface VideoMetadata {
+  videoId: string;
+  title: string;
+  lengthSeconds: string;
+  channelId: string;
+  shortDescription: string;
+  thumbnail: { thumbnails: Array<{ url: string; width: number; height: number }> };
+  viewCount: string;
+  author: string;
+  isLiveContent: boolean;
+}
+
+/**
  * Represents a single transcript snippet with timing information
  */
 export class FetchedTranscriptSnippet {
@@ -107,19 +122,22 @@ export class FetchedTranscript {
   public readonly language: string;
   public readonly languageCode: string;
   public readonly isGenerated: boolean;
+  public readonly metadata: VideoMetadata | undefined;
 
   constructor(
     snippets: FetchedTranscriptSnippet[],
     videoId: string,
     language: string,
     languageCode: string,
-    isGenerated: boolean
+    isGenerated: boolean,
+    metadata?: VideoMetadata
   ) {
     this.snippets = snippets;
     this.videoId = videoId;
     this.language = language;
     this.languageCode = languageCode;
     this.isGenerated = isGenerated;
+    this.metadata = metadata;
   }
 
   /**
@@ -175,6 +193,7 @@ export class Transcript {
   public readonly languageCode: string;
   public readonly isGenerated: boolean;
   public readonly translationLanguages: TranslationLanguage[];
+  public readonly metadata: VideoMetadata | undefined;
 
   private readonly httpClient: any;
   private readonly url: string;
@@ -187,7 +206,8 @@ export class Transcript {
     language: string,
     languageCode: string,
     isGenerated: boolean,
-    translationLanguages: TranslationLanguage[]
+    translationLanguages: TranslationLanguage[],
+    metadata?: VideoMetadata
   ) {
     this.httpClient = httpClient;
     this.videoId = videoId;
@@ -196,7 +216,8 @@ export class Transcript {
     this.languageCode = languageCode;
     this.isGenerated = isGenerated;
     this.translationLanguages = translationLanguages;
-    
+    this.metadata = metadata;
+
     this.translationLanguagesDict = new Map(
       translationLanguages.map(tl => [tl.languageCode, tl.language])
     );
@@ -230,7 +251,8 @@ export class Transcript {
       this.videoId,
       this.language,
       this.languageCode,
-      this.isGenerated
+      this.isGenerated,
+      this.metadata
     );
   }
 
@@ -256,7 +278,8 @@ export class Transcript {
       translatedLanguage,
       languageCode,
       true, // Translated transcripts are always generated
-      [] // Translated transcripts can't be further translated
+      [], // Translated transcripts can't be further translated
+      this.metadata
     );
   }
 
@@ -282,6 +305,7 @@ export class Transcript {
  */
 export class TranscriptList {
   public readonly videoId: string;
+  public readonly metadata: VideoMetadata | undefined;
   private readonly manuallyCreatedTranscripts: Map<string, Transcript>;
   private readonly generatedTranscripts: Map<string, Transcript>;
   private readonly translationLanguages: TranslationLanguage[];
@@ -290,12 +314,14 @@ export class TranscriptList {
     videoId: string,
     manuallyCreatedTranscripts: Map<string, Transcript>,
     generatedTranscripts: Map<string, Transcript>,
-    translationLanguages: TranslationLanguage[]
+    translationLanguages: TranslationLanguage[],
+    metadata?: VideoMetadata
   ) {
     this.videoId = videoId;
     this.manuallyCreatedTranscripts = manuallyCreatedTranscripts;
     this.generatedTranscripts = generatedTranscripts;
     this.translationLanguages = translationLanguages;
+    this.metadata = metadata;
   }
 
   /**

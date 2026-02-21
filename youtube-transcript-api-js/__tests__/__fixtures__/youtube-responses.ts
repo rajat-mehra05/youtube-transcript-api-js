@@ -91,8 +91,26 @@ export const VIDEO_PAGE_HTML = `
 </body>
 </html>`;
 
+// Mock video details for metadata tests
+export const MOCK_VIDEO_DETAILS = {
+  videoId: 'test123',
+  title: 'Test Video Title',
+  lengthSeconds: '300',
+  channelId: 'UCtest123',
+  shortDescription: 'A test video description',
+  thumbnail: {
+    thumbnails: [
+      { url: 'https://i.ytimg.com/vi/test123/default.jpg', width: 120, height: 90 }
+    ]
+  },
+  viewCount: '12345',
+  author: 'Test Author',
+  isLiveContent: false
+};
+
 // Mock INNERTUBE player response with captions
 export const INNERTUBE_RESPONSE = {
+  videoDetails: MOCK_VIDEO_DETAILS,
   captions: {
     playerCaptionsTracklistRenderer: {
       captionTracks: [
