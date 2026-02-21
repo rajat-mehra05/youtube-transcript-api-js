@@ -1,11 +1,13 @@
 import { EnhancedYouTubeTranscriptApi } from '../enhanced-api';
 import { YouTubeTranscriptApi } from '../api';
 import { YouTubeTranscriptApiException } from '../errors';
+import { FormatterLoader } from '../formatters';
 import axios from 'axios';
 
 // Mock dependencies
 jest.mock('axios');
 jest.mock('../api');
+jest.mock('../formatters');
 jest.mock('http-proxy-agent', () => ({
   HttpProxyAgent: jest.fn().mockImplementation((url: string) => ({ url })),
 }));
@@ -270,6 +272,42 @@ describe('EnhancedYouTubeTranscriptApi', () => {
 
       expect(mockBaseApi.fetch).toHaveBeenCalledWith('test123', ['en'], true);
     });
+
+    it('should apply formatter when formatter param is provided', async () => {
+      const mockTranscript = { snippets: [{ text: 'Hello', start: 0, duration: 1 }] };
+      const mockBaseApi = {
+        fetch: jest.fn().mockResolvedValue(mockTranscript),
+        list: jest.fn(),
+      };
+
+      (YouTubeTranscriptApi as jest.Mock).mockImplementation(() => mockBaseApi);
+
+      const mockFormatTranscript = jest.fn().mockReturnValue('formatted output');
+      const mockLoad = jest.fn().mockReturnValue({ formatTranscript: mockFormatTranscript });
+      (FormatterLoader as unknown as jest.Mock).mockImplementation(() => ({ load: mockLoad }));
+
+      const api = new EnhancedYouTubeTranscriptApi();
+      const result = await api.fetch('test123', ['en'], false, 'json');
+
+      expect(mockLoad).toHaveBeenCalledWith('json');
+      expect(mockFormatTranscript).toHaveBeenCalledWith(mockTranscript);
+      expect(result).toBe('formatted output');
+    });
+
+    it('should return raw transcript when formatter is not provided', async () => {
+      const mockTranscript = { snippets: [{ text: 'Hello', start: 0, duration: 1 }] };
+      const mockBaseApi = {
+        fetch: jest.fn().mockResolvedValue(mockTranscript),
+        list: jest.fn(),
+      };
+
+      (YouTubeTranscriptApi as jest.Mock).mockImplementation(() => mockBaseApi);
+
+      const api = new EnhancedYouTubeTranscriptApi();
+      const result = await api.fetch('test123');
+
+      expect(result).toBe(mockTranscript);
+    });
   });
 
   describe('list', () => {
@@ -328,7 +366,6 @@ describe('EnhancedYouTubeTranscriptApi', () => {
         channelId: 'UCtest',
         lengthSeconds: 300,
         viewCount: 12345,
-        isPrivate: false,
         isLiveContent: false,
       });
     });

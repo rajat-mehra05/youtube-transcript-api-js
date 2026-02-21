@@ -6,6 +6,7 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 import { YouTubeTranscriptApi } from '../api';
 import { ProxyOptions, InvidiousOptions, EnhancedProxyConfig } from '../proxies';
 import { YouTubeTranscriptApiException } from '../errors';
+import { FormatterLoader } from '../formatters';
 
 /**
  * Normalized video metadata returned by getVideoMetadata()
@@ -18,7 +19,6 @@ export interface VideoMetadataResult {
   channelId: string;
   lengthSeconds: number;
   viewCount: number;
-  isPrivate: boolean;
   isLiveContent: boolean;
 }
 
@@ -185,8 +185,14 @@ export class EnhancedYouTubeTranscriptApi {
     preserveFormatting: boolean = false,
     formatter?: string
   ): Promise<any> {
-    // Use base API with enhanced proxy support
-    return await this.baseApi.fetch(videoId, languages, preserveFormatting);
+    const transcript = await this.baseApi.fetch(videoId, languages, preserveFormatting);
+
+    if (formatter) {
+      const loader = new FormatterLoader();
+      return loader.load(formatter).formatTranscript(transcript);
+    }
+
+    return transcript;
   }
 
   /**
@@ -215,7 +221,6 @@ export class EnhancedYouTubeTranscriptApi {
       channelId: metadata.channelId || '',
       lengthSeconds: parseInt(metadata.lengthSeconds, 10) || 0,
       viewCount: parseInt(metadata.viewCount, 10) || 0,
-      isPrivate: false,
       isLiveContent: metadata.isLiveContent ?? false,
     };
   }
