@@ -60,8 +60,22 @@ const MOCK_CONSENT_NO_VALUE_HTML = `
 </body>
 </html>`;
 
+// Mock video details
+const MOCK_VIDEO_DETAILS = {
+  videoId: TEST_VIDEO_ID,
+  title: 'Test Video',
+  lengthSeconds: '300',
+  channelId: 'UCtest',
+  shortDescription: 'Test description',
+  thumbnail: { thumbnails: [] },
+  viewCount: '100',
+  author: 'Test Author',
+  isLiveContent: false,
+};
+
 // Mock Innertube response - OK
 const MOCK_INNERTUBE_OK = {
+  videoDetails: MOCK_VIDEO_DETAILS,
   playabilityStatus: {
     status: 'OK',
   },
@@ -205,6 +219,58 @@ describe('TranscriptListFetcher', () => {
 
       // English is marked as translatable, so should have translation languages
       expect(englishTranscript.isTranslatable).toBe(true);
+    });
+  });
+
+  describe('metadata threading', () => {
+    it('should thread videoDetails metadata to TranscriptList', async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });
+
+      const result = await fetcher.fetch(TEST_VIDEO_ID);
+
+      expect(result.metadata).toBeDefined();
+      expect(result.metadata?.title).toBe('Test Video');
+      expect(result.metadata?.author).toBe('Test Author');
+      expect(result.metadata?.viewCount).toBe('100');
+    });
+
+    it('should thread metadata to individual transcripts', async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });
+
+      const result = await fetcher.fetch(TEST_VIDEO_ID);
+      const transcript = result.findTranscript(['en']);
+
+      expect(transcript.metadata).toBeDefined();
+      expect(transcript.metadata?.title).toBe('Test Video');
+    });
+
+    it('should handle missing videoDetails gracefully', async () => {
+      const responseWithoutDetails = {
+        playabilityStatus: { status: 'OK' },
+        captions: MOCK_INNERTUBE_OK.captions,
+      };
+      mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post.mockResolvedValueOnce({ data: responseWithoutDetails });
+
+      const result = await fetcher.fetch(TEST_VIDEO_ID);
+
+      expect(result.metadata).toBeUndefined();
+    });
+
+    it('should handle null videoDetails gracefully', async () => {
+      const responseWithNull = {
+        videoDetails: null,
+        playabilityStatus: { status: 'OK' },
+        captions: MOCK_INNERTUBE_OK.captions,
+      };
+      mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post.mockResolvedValueOnce({ data: responseWithNull });
+
+      const result = await fetcher.fetch(TEST_VIDEO_ID);
+
+      expect(result.metadata).toBeUndefined();
     });
   });
 

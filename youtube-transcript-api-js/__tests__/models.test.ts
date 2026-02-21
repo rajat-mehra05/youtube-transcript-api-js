@@ -3,7 +3,8 @@ import {
   FetchedTranscript,
   TranslationLanguage,
   Transcript,
-  TranscriptList
+  TranscriptList,
+  VideoMetadata
 } from '../transcripts/models';
 import {
   NotTranslatable,
@@ -19,6 +20,18 @@ import { AxiosError } from 'axios';
 
 describe('Models', () => {
   const TEST_VIDEO_ID = 'dQw4w9WgXcQ';
+
+  const MOCK_METADATA: VideoMetadata = {
+    videoId: TEST_VIDEO_ID,
+    title: 'Test Video',
+    lengthSeconds: '300',
+    channelId: 'UCtest',
+    shortDescription: 'A test video',
+    thumbnail: { thumbnails: [] },
+    viewCount: '1000',
+    author: 'Test Author',
+    isLiveContent: false,
+  };
 
   // ============================================
   // FetchedTranscriptSnippet
@@ -201,6 +214,25 @@ describe('Models', () => {
 
         expect(arraySnippets).toHaveLength(3);
         expect(arraySnippets).toEqual(snippets);
+      });
+    });
+
+    describe('metadata', () => {
+      it('should store metadata when provided', () => {
+        const withMetadata = new FetchedTranscript(
+          snippets,
+          TEST_VIDEO_ID,
+          'English',
+          'en',
+          false,
+          MOCK_METADATA
+        );
+
+        expect(withMetadata.metadata).toEqual(MOCK_METADATA);
+      });
+
+      it('should be undefined when not provided', () => {
+        expect(transcript.metadata).toBeUndefined();
       });
     });
   });
@@ -725,6 +757,72 @@ describe('Models', () => {
         await expect(transcript.fetch()).rejects.toThrow(RateLimitExceeded);
       });
     });
+
+    describe('metadata', () => {
+      const validXml = `<?xml version="1.0" encoding="utf-8" ?>
+<transcript>
+  <text start="0" dur="2.5">Hello world</text>
+  <text start="2.5" dur="3.0">Test transcript</text>
+</transcript>`;
+
+      beforeEach(() => {
+        mockHttpClient.get.mockReset();
+      });
+
+      it('should pass metadata through to FetchedTranscript on fetch()', async () => {
+        mockHttpClient.get.mockResolvedValue({ data: validXml });
+
+        const transcript = new Transcript(
+          mockHttpClient,
+          TEST_VIDEO_ID,
+          testUrl,
+          'English',
+          'en',
+          false,
+          [],
+          MOCK_METADATA
+        );
+
+        const fetched = await transcript.fetch();
+
+        expect(fetched.metadata).toEqual(MOCK_METADATA);
+      });
+
+      it('should have undefined metadata on FetchedTranscript when not provided', async () => {
+        mockHttpClient.get.mockResolvedValue({ data: validXml });
+
+        const transcript = new Transcript(
+          mockHttpClient,
+          TEST_VIDEO_ID,
+          testUrl,
+          'English',
+          'en',
+          false,
+          []
+        );
+
+        const fetched = await transcript.fetch();
+
+        expect(fetched.metadata).toBeUndefined();
+      });
+
+      it('should preserve metadata through translate()', () => {
+        const transcript = new Transcript(
+          mockHttpClient,
+          TEST_VIDEO_ID,
+          testUrl,
+          'English',
+          'en',
+          false,
+          translationLanguages,
+          MOCK_METADATA
+        );
+
+        const translated = transcript.translate('es');
+
+        expect(translated.metadata).toEqual(MOCK_METADATA);
+      });
+    });
   });
 
   // ============================================
@@ -959,6 +1057,24 @@ describe('Models', () => {
         const str = noTranslationList.toString();
 
         expect(str).toContain('(TRANSLATION LANGUAGES)\nNone');
+      });
+    });
+
+    describe('metadata', () => {
+      it('should store metadata when provided', () => {
+        const listWithMetadata = new TranscriptList(
+          TEST_VIDEO_ID,
+          manualTranscripts,
+          generatedTranscripts,
+          translationLanguages,
+          MOCK_METADATA
+        );
+
+        expect(listWithMetadata.metadata).toEqual(MOCK_METADATA);
+      });
+
+      it('should be undefined when not provided', () => {
+        expect(transcriptList.metadata).toBeUndefined();
       });
     });
   });

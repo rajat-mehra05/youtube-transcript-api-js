@@ -5,6 +5,7 @@ import {
   TextFormatter,
   SRTFormatter,
   WebVTTFormatter,
+  TimestampedTextFormatter,
   FormatterLoader
 } from '../formatters';
 import { FetchedTranscript, FetchedTranscriptSnippet } from '../transcripts/models';
@@ -269,6 +270,75 @@ describe('Formatters', () => {
   });
 
   // ============================================
+  // TimestampedTextFormatter
+  // ============================================
+
+  describe('TimestampedTextFormatter', () => {
+    it('should format transcript with timestamps', () => {
+      const formatter = new TimestampedTextFormatter();
+      const result = formatter.formatTranscript(transcript);
+
+      expect(result).toBe('[0:00] Hello world\n[0:02] This is a test');
+    });
+
+    it('should handle large timestamps', () => {
+      const longSnippets = [
+        new FetchedTranscriptSnippet('Minute mark', 125.5, 2.0),
+        new FetchedTranscriptSnippet('Hour mark', 3661, 2.0),
+      ];
+      const longTranscript = new FetchedTranscript(longSnippets, 'long', 'English', 'en', false);
+
+      const formatter = new TimestampedTextFormatter();
+      const result = formatter.formatTranscript(longTranscript);
+
+      expect(result).toBe('[2:05] Minute mark\n[61:01] Hour mark');
+    });
+
+    it('should group snippets by time bucket', () => {
+      const snippets = [
+        new FetchedTranscriptSnippet('First', 0, 1),
+        new FetchedTranscriptSnippet('Second', 2, 1),
+        new FetchedTranscriptSnippet('Third', 5, 1),
+        new FetchedTranscriptSnippet('Fourth', 32, 1),
+      ];
+      const grouped = new FetchedTranscript(snippets, 'grp', 'English', 'en', false);
+
+      const formatter = new TimestampedTextFormatter();
+      const result = formatter.formatTranscript(grouped, { groupBySeconds: 30 });
+
+      expect(result).toBe('[0:00] First Second Third\n[0:30] Fourth');
+    });
+
+    it('should format multiple transcripts with triple newline separator', () => {
+      const formatter = new TimestampedTextFormatter();
+      const result = formatter.formatTranscripts([transcript, transcript2]);
+
+      expect(result).toContain('[0:00] Hello world');
+      expect(result).toContain('\n\n\n');
+      expect(result).toContain('[0:00] Second transcript');
+    });
+
+    it('should return empty string for empty transcript', () => {
+      const emptyTranscript = new FetchedTranscript([], 'empty', 'English', 'en', false);
+      const formatter = new TimestampedTextFormatter();
+
+      expect(formatter.formatTranscript(emptyTranscript)).toBe('');
+    });
+
+    it('should treat groupBySeconds: 0 as no grouping', () => {
+      const formatter = new TimestampedTextFormatter();
+      const result = formatter.formatTranscript(transcript, { groupBySeconds: 0 });
+
+      expect(result).toBe('[0:00] Hello world\n[0:02] This is a test');
+    });
+
+    it('should be an instance of Formatter', () => {
+      const formatter = new TimestampedTextFormatter();
+      expect(formatter).toBeInstanceOf(Formatter);
+    });
+  });
+
+  // ============================================
   // FormatterLoader
   // ============================================
 
@@ -281,6 +351,7 @@ describe('Formatters', () => {
       expect(loader.load('srt')).toBeInstanceOf(SRTFormatter);
       expect(loader.load('webvtt')).toBeInstanceOf(WebVTTFormatter);
       expect(loader.load('pretty')).toBeInstanceOf(PrettyPrintFormatter);
+      expect(loader.load('timestamped')).toBeInstanceOf(TimestampedTextFormatter);
     });
 
     it('should throw error for unknown formatter type', () => {
@@ -299,6 +370,7 @@ describe('Formatters', () => {
       expect(() => loader.load('invalid')).toThrow('text');
       expect(() => loader.load('invalid')).toThrow('webvtt');
       expect(() => loader.load('invalid')).toThrow('srt');
+      expect(() => loader.load('invalid')).toThrow('timestamped');
     });
 
     it('should default to pretty formatter', () => {
@@ -315,7 +387,8 @@ describe('Formatters', () => {
       expect(types).toContain('text');
       expect(types).toContain('webvtt');
       expect(types).toContain('srt');
-      expect(types).toHaveLength(5);
+      expect(types).toContain('timestamped');
+      expect(types).toHaveLength(6);
     });
   });
 });

@@ -124,8 +124,8 @@ export class TranscriptListFetcher {
    * Fetch transcript list for a video
    */
   async fetch(videoId: string): Promise<TranscriptList> {
-    const captionsJson = await this.fetchCaptionsJson(videoId);
-    return this.buildTranscriptList(videoId, captionsJson);
+    const { captionsJson, videoDetails } = await this.fetchCaptionsJson(videoId);
+    return this.buildTranscriptList(videoId, captionsJson, videoDetails);
   }
 
   /**
@@ -170,7 +170,7 @@ export class TranscriptListFetcher {
   /**
    * Extract captions JSON from Innertube data
    */
-  private extractCaptionsJson(innertubeData: any, videoId: string): any {
+  private extractCaptionsJson(innertubeData: any, videoId: string): { captionsJson: any; videoDetails?: any } {
     this.assertPlayability(innertubeData.playabilityStatus, videoId);
 
     const captionsJson = innertubeData.captions?.playerCaptionsTracklistRenderer;
@@ -178,7 +178,7 @@ export class TranscriptListFetcher {
       throw new TranscriptsDisabled(videoId);
     }
 
-    return captionsJson;
+    return { captionsJson, videoDetails: innertubeData.videoDetails || undefined };
   }
 
   /**
@@ -277,7 +277,7 @@ export class TranscriptListFetcher {
   /**
    * Build TranscriptList from captions JSON
    */
-  private buildTranscriptList(videoId: string, captionsJson: any): TranscriptList {
+  private buildTranscriptList(videoId: string, captionsJson: any, videoDetails?: any): TranscriptList {
     const translationLanguages = (captionsJson.translationLanguages || []).map((tl: any) => 
       new TranslationLanguage(
         tl.languageName.runs[0].text,
@@ -299,7 +299,8 @@ export class TranscriptListFetcher {
         caption.name.runs[0].text,
         caption.languageCode,
         isGenerated,
-        caption.isTranslatable ? translationLanguages : []
+        caption.isTranslatable ? translationLanguages : [],
+        videoDetails
       );
       
       transcriptMap.set(caption.languageCode, transcript);
@@ -309,7 +310,8 @@ export class TranscriptListFetcher {
       videoId,
       manuallyCreatedTranscripts,
       generatedTranscripts,
-      translationLanguages
+      translationLanguages,
+      videoDetails
     );
   }
 

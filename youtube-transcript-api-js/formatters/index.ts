@@ -1,4 +1,4 @@
-import { FetchedTranscript } from '../transcripts/models';
+import { FetchedTranscript, FetchedTranscriptSnippet } from '../transcripts/models';
 
 /**
  * Base formatter class
@@ -157,6 +157,59 @@ export class WebVTTFormatter extends TextBasedFormatter {
 }
 
 /**
+ * Timestamped text formatter for LLM-friendly output
+ * Produces lines like: [0:00] Hello world
+ * Supports grouping snippets into time buckets via groupBySeconds option
+ */
+export class TimestampedTextFormatter extends Formatter {
+  formatTranscript(transcript: FetchedTranscript, options: any = {}): string {
+    const snippets = transcript.snippets;
+    if (snippets.length === 0) return '';
+
+    const groupBySeconds: number = options.groupBySeconds || 0;
+
+    if (groupBySeconds > 0) {
+      return this.formatGrouped(snippets, groupBySeconds);
+    }
+
+    return snippets
+      .map(s => `${this.formatTime(s.start)} ${s.text}`)
+      .join('\n');
+  }
+
+  formatTranscripts(transcripts: FetchedTranscript[], options: any = {}): string {
+    return transcripts
+      .map(t => this.formatTranscript(t, options))
+      .join('\n\n\n');
+  }
+
+  private formatGrouped(snippets: FetchedTranscriptSnippet[], groupBySeconds: number): string {
+    const buckets = new Map<number, string[]>();
+
+    for (const snippet of snippets) {
+      const bucketKey = Math.floor(snippet.start / groupBySeconds) * groupBySeconds;
+      if (!buckets.has(bucketKey)) {
+        buckets.set(bucketKey, []);
+      }
+      buckets.get(bucketKey)!.push(snippet.text);
+    }
+
+    const lines: string[] = [];
+    for (const bucketStart of Array.from(buckets.keys()).sort((a, b) => a - b)) {
+      lines.push(`${this.formatTime(bucketStart)} ${buckets.get(bucketStart)!.join(' ')}`);
+    }
+
+    return lines.join('\n');
+  }
+
+  private formatTime(seconds: number): string {
+    const totalMinutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `[${totalMinutes}:${secs.toString().padStart(2, '0')}]`;
+  }
+}
+
+/**
  * Formatter loader
  */
 export class FormatterLoader {
@@ -166,6 +219,7 @@ export class FormatterLoader {
     text: TextFormatter,
     webvtt: WebVTTFormatter,
     srt: SRTFormatter,
+    timestamped: TimestampedTextFormatter,
   };
 
   /**
