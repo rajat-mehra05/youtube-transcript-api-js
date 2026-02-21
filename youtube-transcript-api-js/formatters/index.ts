@@ -195,8 +195,8 @@ export class TimestampedTextFormatter extends Formatter {
     }
 
     const lines: string[] = [];
-    for (const [bucketStart, texts] of buckets) {
-      lines.push(`${this.formatTime(bucketStart)} ${texts.join(' ')}`);
+    for (const bucketStart of Array.from(buckets.keys()).sort((a, b) => a - b)) {
+      lines.push(`${this.formatTime(bucketStart)} ${buckets.get(bucketStart)!.join(' ')}`);
     }
 
     return lines.join('\n');
