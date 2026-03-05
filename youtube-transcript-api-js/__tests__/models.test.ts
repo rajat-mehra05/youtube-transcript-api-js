@@ -1,3 +1,4 @@
+import { AxiosInstance } from 'axios';
 import {
   FetchedTranscriptSnippet,
   FetchedTranscript,
@@ -259,7 +260,7 @@ describe('Models', () => {
   describe('Transcript', () => {
     const mockHttpClient = {
       get: jest.fn()
-    };
+    } as unknown as jest.Mocked<AxiosInstance>;
     const testUrl = 'https://www.youtube.com/api/timedtext?v=test123&lang=en';
     const translationLanguages = [
       new TranslationLanguage('Spanish', 'es'),
@@ -830,7 +831,7 @@ describe('Models', () => {
   // ============================================
 
   describe('TranscriptList', () => {
-    const mockHttpClient = { get: jest.fn() };
+    const mockHttpClient = { get: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
     const translationLanguages = [
       new TranslationLanguage('Spanish', 'es'),
       new TranslationLanguage('French', 'fr')

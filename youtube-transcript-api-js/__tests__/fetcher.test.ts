@@ -15,7 +15,18 @@ import {
   TimeoutError,
   ConnectionError,
 } from '../errors';
+import { ProxyConfig, RequestsProxyConfig } from '../proxies';
 import { TEST_VIDEO_ID, VALID_TRANSCRIPT_XML } from './__fixtures__/youtube-responses';
+
+class MockProxyConfig extends ProxyConfig {
+  private readonly _retriesWhenBlocked: number;
+  constructor(retriesWhenBlocked: number) {
+    super();
+    this._retriesWhenBlocked = retriesWhenBlocked;
+  }
+  toRequestsConfig(): RequestsProxyConfig { return {}; }
+  get retriesWhenBlocked(): number { return this._retriesWhenBlocked; }
+}
 
 // Mock HTML with INNERTUBE_API_KEY
 const MOCK_VIDEO_HTML = `
@@ -308,9 +319,7 @@ describe('TranscriptListFetcher', () => {
     });
 
     it('should retry when bot detected and retries configured', async () => {
-      const fetcherWithRetries = new TranscriptListFetcher(mockHttpClient, {
-        retriesWhenBlocked: 2,
-      });
+      const fetcherWithRetries = new TranscriptListFetcher(mockHttpClient, new MockProxyConfig(2));
 
       mockHttpClient.get
         .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML })

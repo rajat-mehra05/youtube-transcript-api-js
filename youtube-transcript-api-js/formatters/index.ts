@@ -91,7 +91,7 @@ export abstract class TextBasedFormatter extends TextFormatter {
   /**
    * Format individual transcript line
    */
-  protected abstract formatTranscriptLine(index: number, timeText: string, snippet: any): string;
+  protected abstract formatTranscriptLine(index: number, timeText: string, snippet: FetchedTranscriptSnippet): string;
 
   /**
    * Convert seconds to timestamp
@@ -144,7 +144,7 @@ export class SRTFormatter extends TextBasedFormatter {
     return lines.join('\n\n') + '\n';
   }
 
-  protected formatTranscriptLine(index: number, timeText: string, snippet: any): string {
+  protected formatTranscriptLine(index: number, timeText: string, snippet: FetchedTranscriptSnippet): string {
     return `${index + 1}\n${timeText}\n${snippet.text}`;
   }
 }
@@ -161,7 +161,7 @@ export class WebVTTFormatter extends TextBasedFormatter {
     return 'WEBVTT\n\n' + lines.join('\n\n') + '\n';
   }
 
-  protected formatTranscriptLine(index: number, timeText: string, snippet: any): string {
+  protected formatTranscriptLine(index: number, timeText: string, snippet: FetchedTranscriptSnippet): string {
     return `${timeText}\n${snippet.text}`;
   }
 }

@@ -4,6 +4,20 @@ import { GenericProxyConfig, WebshareProxyConfig, ProxyConfig } from '../proxies
 import { FormatterLoader } from '../formatters';
 import { TranscriptList, FetchedTranscript } from '../transcripts/models';
 
+interface CliOptions {
+  videoIds?: string[];
+  listTranscripts?: boolean;
+  languages: string[];
+  excludeGenerated?: boolean;
+  excludeManuallyCreated?: boolean;
+  format: string;
+  translate?: string;
+  webshareProxyUsername?: string;
+  webshareProxyPassword?: string;
+  httpProxy?: string;
+  httpsProxy?: string;
+}
+
 /**
  * CLI class for YouTube Transcript API
  */
@@ -81,7 +95,7 @@ export class YouTubeTranscriptCli {
   /**
    * Handle the main command
    */
-  private async handleCommand(videoIds: string[], options: any): Promise<void> {
+  private async handleCommand(videoIds: string[], options: CliOptions): Promise<void> {
     try {
       // Commander.js passes arguments differently - check if videoIds is actually the options
       if (Array.isArray(videoIds) && videoIds.length > 0 && typeof videoIds[0] === 'string' && !videoIds[0].startsWith('--')) {
@@ -90,9 +104,24 @@ export class YouTubeTranscriptCli {
         // Arguments might be in options
         videoIds = options.videoIds;
       } else {
-        // Try to get from process.argv
+        // Try to get from process.argv, skipping flags and their values
         const args = process.argv.slice(2);
-        const videoIdArgs = args.filter(arg => !arg.startsWith('--'));
+        const FLAGS_WITH_VALUES = new Set([
+          '--languages', '--format', '--translate',
+          '--webshare-proxy-username', '--webshare-proxy-password',
+          '--http-proxy', '--https-proxy',
+        ]);
+        const videoIdArgs: string[] = [];
+        for (let i = 0; i < args.length; i++) {
+          const arg = args[i]!;
+          if (arg.startsWith('--')) {
+            if (FLAGS_WITH_VALUES.has(arg)) {
+              i++; // skip the flag's value
+            }
+            continue;
+          }
+          videoIdArgs.push(arg);
+        }
         if (videoIdArgs.length > 0) {
           videoIds = videoIdArgs;
         }
@@ -141,7 +170,7 @@ export class YouTubeTranscriptCli {
   /**
    * Create proxy configuration from options
    */
-  private createProxyConfig(options: any): ProxyConfig | undefined {
+  private createProxyConfig(options: CliOptions): ProxyConfig | undefined {
     if (options.webshareProxyUsername || options.webshareProxyPassword) {
       return new WebshareProxyConfig(
         options.webshareProxyUsername || '',
@@ -162,7 +191,7 @@ export class YouTubeTranscriptCli {
   private async fetchTranscript(
     api: YouTubeTranscriptApi,
     videoId: string,
-    options: any
+    options: CliOptions
   ): Promise<FetchedTranscript> {
     const transcriptList = await api.list(videoId);
     let transcript;
@@ -179,9 +208,7 @@ export class YouTubeTranscriptCli {
       transcript = transcript.translate(options.translate);
     }
 
-    const fetched = await transcript.fetch();
-    console.log(fetched.snippets[0]?.text);
-    return fetched;
+    return transcript.fetch();
   }
 
   /**
@@ -190,7 +217,7 @@ export class YouTubeTranscriptCli {
   private printResults(
     results: (TranscriptList | FetchedTranscript)[],
     errors: Error[],
-    options: any
+    options: CliOptions
   ): void {
     const outputSections: string[] = [];
 

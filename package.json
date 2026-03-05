@@ -59,16 +59,15 @@
   "dependencies": {
     "axios": "^1.6.0",
     "commander": "^11.1.0",
+    "fast-xml-parser": "^5.4.2",
     "html-entities": "^2.6.0",
     "http-proxy-agent": "^7.0.2",
-    "https-proxy-agent": "^7.0.6",
-    "xml2js": "^0.6.2"
+    "https-proxy-agent": "^7.0.6"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.8",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.9.0",
-    "@types/xml2js": "^0.4.14",
     "@typescript-eslint/eslint-plugin": "^6.12.0",
     "@typescript-eslint/parser": "^6.12.0",
     "eslint": "^8.54.0",

@@ -1,5 +1,6 @@
 import { AxiosInstance, AxiosError } from 'axios';
-import { TranscriptList, Transcript, TranslationLanguage } from './models';
+import { TranscriptList, Transcript, TranslationLanguage, VideoMetadata } from './models';
+import { ProxyConfig } from '../proxies';
 import {
   YouTubeDataUnparsable,
   VideoUnavailable,
@@ -113,9 +114,9 @@ function wrapNetworkError(error: unknown, url: string, videoId: string): never {
  */
 export class TranscriptListFetcher {
   private readonly httpClient: AxiosInstance;
-  private readonly proxyConfig?: any;
+  private readonly proxyConfig: ProxyConfig | undefined;
 
-  constructor(httpClient: AxiosInstance, proxyConfig?: any) {
+  constructor(httpClient: AxiosInstance, proxyConfig?: ProxyConfig) {
     this.httpClient = httpClient;
     this.proxyConfig = proxyConfig;
   }
@@ -131,7 +132,7 @@ export class TranscriptListFetcher {
   /**
    * Fetch captions JSON data from YouTube
    */
-  private async fetchCaptionsJson(videoId: string, tryNumber: number = 0): Promise<any> {
+  private async fetchCaptionsJson(videoId: string, tryNumber: number = 0): Promise<{ captionsJson: Record<string, unknown>; videoDetails?: VideoMetadata }> {
     try {
       const html = await this.fetchVideoHtml(videoId);
       const apiKey = this.extractInnertubeApiKey(html, videoId);
@@ -170,7 +171,7 @@ export class TranscriptListFetcher {
   /**
    * Extract captions JSON from Innertube data
    */
-  private extractCaptionsJson(innertubeData: any, videoId: string): { captionsJson: any; videoDetails?: any } {
+  private extractCaptionsJson(innertubeData: Record<string, any>, videoId: string): { captionsJson: Record<string, any>; videoDetails?: VideoMetadata } {
     this.assertPlayability(innertubeData.playabilityStatus, videoId);
 
     const captionsJson = innertubeData.captions?.playerCaptionsTracklistRenderer;
@@ -184,7 +185,7 @@ export class TranscriptListFetcher {
   /**
    * Assert video playability status
    */
-  private assertPlayability(playabilityStatusData: any, videoId: string): void {
+  private assertPlayability(playabilityStatusData: Record<string, any>, videoId: string): void {
     const playabilityStatus = playabilityStatusData?.status;
     
     if (playabilityStatus && playabilityStatus !== PLAYABILITY_STATUS.OK) {
@@ -261,7 +262,7 @@ export class TranscriptListFetcher {
   /**
    * Fetch Innertube API data
    */
-  private async fetchInnertubeData(videoId: string, apiKey: string): Promise<any> {
+  private async fetchInnertubeData(videoId: string, apiKey: string): Promise<Record<string, any>> {
     const url = INNERTUBE_API_URL.replace('{apiKey}', apiKey);
     try {
       const response = await this.httpClient.post(url, {
@@ -277,7 +278,7 @@ export class TranscriptListFetcher {
   /**
    * Build TranscriptList from captions JSON
    */
-  private buildTranscriptList(videoId: string, captionsJson: any, videoDetails?: any): TranscriptList {
+  private buildTranscriptList(videoId: string, captionsJson: Record<string, any>, videoDetails?: VideoMetadata): TranscriptList {
     const translationLanguages = (captionsJson.translationLanguages || []).map((tl: any) => 
       new TranslationLanguage(
         tl.languageName.runs[0].text,

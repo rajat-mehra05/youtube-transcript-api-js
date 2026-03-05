@@ -1,3 +1,4 @@
+import { AxiosInstance } from 'axios';
 import { YouTubeTranscriptCli, main } from '../cli/index';
 import { YouTubeTranscriptApi } from '../api';
 import { FormatterLoader } from '../formatters';
@@ -34,7 +35,7 @@ describe('YouTubeTranscriptCli', () => {
   };
 
   const createMockTranscriptList = (videoId: string) => {
-    const mockHttpClient = { get: jest.fn() };
+    const mockHttpClient = { get: jest.fn() } as unknown as jest.Mocked<AxiosInstance>;
     const translationLanguages = [new TranslationLanguage('Spanish', 'es')];
 
     const englishManual = new Transcript(

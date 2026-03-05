@@ -14,7 +14,7 @@ export default defineConfig([
     target: 'es2020',
     minify: false,
     treeshake: true,
-    external: ['axios', 'commander', 'html-entities', 'http-proxy-agent', 'https-proxy-agent', 'xml2js'],
+    external: ['axios', 'commander', 'html-entities', 'http-proxy-agent', 'https-proxy-agent', 'fast-xml-parser'],
   },
   // CLI build (CJS only)
   {
@@ -30,6 +30,6 @@ export default defineConfig([
     define: {
       'process.env.PACKAGE_VERSION': JSON.stringify(pkg.version),
     },
-    external: ['axios', 'commander', 'html-entities', 'http-proxy-agent', 'https-proxy-agent', 'xml2js'],
+    external: ['axios', 'commander', 'html-entities', 'http-proxy-agent', 'https-proxy-agent', 'fast-xml-parser'],
   },
 ]);
