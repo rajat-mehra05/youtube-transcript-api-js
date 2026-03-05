@@ -122,8 +122,13 @@ export class TranscriptListFetcher {
     this.httpClient = httpClient;
     this.proxyConfig = proxyConfig;
 
-    const effectiveMaxRetries = retryConfig?.maxRetries
+    const rawMaxRetries = retryConfig?.maxRetries
       ?? (proxyConfig?.retriesWhenBlocked ?? DEFAULT_RETRY_CONFIG.maxRetries);
+
+    // Clamp to a non-negative integer; fall back to default if invalid (NaN/Infinity/negative)
+    const effectiveMaxRetries = Number.isFinite(rawMaxRetries) && rawMaxRetries >= 0
+      ? Math.floor(rawMaxRetries)
+      : DEFAULT_RETRY_CONFIG.maxRetries;
 
     this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig, maxRetries: effectiveMaxRetries };
   }

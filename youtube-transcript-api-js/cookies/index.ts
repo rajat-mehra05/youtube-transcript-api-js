@@ -36,9 +36,20 @@ export function parseNetscapeCookies(content: string): ParsedCookie[] {
 
   for (const line of content.split('\n')) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
+    if (!trimmed) continue;
 
-    const fields = trimmed.split('\t');
+    // #HttpOnly_ is a valid Netscape cookie prefix (marks HTTP-only cookies);
+    // strip it so the line is parsed normally. Skip other comment lines.
+    let processedLine = trimmed;
+    if (trimmed.startsWith('#')) {
+      if (trimmed.startsWith('#HttpOnly_')) {
+        processedLine = trimmed.slice('#HttpOnly_'.length);
+      } else {
+        continue;
+      }
+    }
+
+    const fields = processedLine.split('\t');
     if (fields.length < 7) continue;
 
     cookies.push({

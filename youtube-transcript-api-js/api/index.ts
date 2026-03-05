@@ -26,8 +26,11 @@ export class YouTubeTranscriptApi {
     const client = httpClient || this.createHttpClient(proxyConfig);
 
     if (options?.cookiePath) {
-      const cookieHeader = loadCookiesFromFile(options.cookiePath);
-      client.defaults.headers.common['Cookie'] = cookieHeader;
+      const newCookies = loadCookiesFromFile(options.cookiePath);
+      const existing = client.defaults.headers.common['Cookie'];
+      client.defaults.headers.common['Cookie'] = existing
+        ? `${existing}; ${newCookies}`
+        : newCookies;
     }
 
     this.fetcher = new TranscriptListFetcher(client, proxyConfig, options?.retryConfig);

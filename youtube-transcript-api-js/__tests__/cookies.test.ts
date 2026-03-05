@@ -56,6 +56,30 @@ describe('parseNetscapeCookies', () => {
     expect(cookies).toHaveLength(1);
   });
 
+  it('should parse #HttpOnly_ prefixed lines as valid cookies', () => {
+    const content = '#HttpOnly_.youtube.com\tTRUE\t/\tTRUE\t0\tSECURE_SID\tsecret123';
+    const cookies = parseNetscapeCookies(content);
+    expect(cookies).toHaveLength(1);
+    expect(cookies[0]).toEqual({
+      domain: '.youtube.com',
+      path: '/',
+      secure: true,
+      expiry: 0,
+      name: 'SECURE_SID',
+      value: 'secret123',
+    });
+  });
+
+  it('should handle mix of #HttpOnly_, comments, and regular lines', () => {
+    const content = `# Netscape HTTP Cookie File
+#HttpOnly_.youtube.com\tTRUE\t/\tTRUE\t0\tHTTPONLY\thval
+.youtube.com\tTRUE\t/\tFALSE\t0\tREGULAR\trval`;
+    const cookies = parseNetscapeCookies(content);
+    expect(cookies).toHaveLength(2);
+    expect(cookies[0]!.name).toBe('HTTPONLY');
+    expect(cookies[1]!.name).toBe('REGULAR');
+  });
+
   it('should handle secure flag case-insensitively', () => {
     const content = '.youtube.com\tTRUE\t/\ttrue\t0\tSID\tval';
     const cookies = parseNetscapeCookies(content);
