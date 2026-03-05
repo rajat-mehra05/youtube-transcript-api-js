@@ -1,5 +1,21 @@
 # youtube-transcript-api-js
 
+## [Unreleased]
+
+### Changed
+- Replaced `xml2js` with `fast-xml-parser` — ~2.8MB smaller install, faster parsing, built-in TypeScript types
+- Tightened `any` types across codebase (`ProxyConfig`, `AxiosInstance`, `FormatterOptions`, `CliOptions`, `FetchedTranscriptSnippet`)
+- `CouldNotRetrieveTranscript.message` now returns the full error message (previously empty; only `toString()` worked)
+
+### Added
+- `FormatterOptions` interface for typed formatter configuration
+- `CliOptions` interface for typed CLI option handling
+- Custom formatter documentation in README
+- Exported missing error types: `InvalidProxyUrl`, `TranscriptParseError`, `RateLimitExceeded`, `NetworkError`, `TimeoutError`, `ConnectionError`
+
+### Removed
+- `xml2js` and `@types/xml2js` dependencies
+
 ## 2.2.0
 
 ### New Features

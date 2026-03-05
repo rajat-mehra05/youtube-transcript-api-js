@@ -27,6 +27,17 @@ export class CouldNotRetrieveTranscript extends YouTubeTranscriptApiException {
   constructor(videoId: string) {
     super('');
     this.videoId = videoId;
+    // Defer message computation — subclass fields aren't set yet during base constructor.
+    // Self-replacing getter: computes once on first access, then caches as a plain property.
+    const self = this;
+    Object.defineProperty(this, 'message', {
+      get() {
+        const msg = self.buildErrorMessage();
+        Object.defineProperty(self, 'message', { value: msg, writable: true, configurable: true });
+        return msg;
+      },
+      configurable: true,
+    });
   }
 
   protected buildErrorMessage(): string {
@@ -127,13 +138,13 @@ export class RequestBlocked extends CouldNotRetrieveTranscript {
     'eventually permanently ban the account that you have used to authenticate ' +
     'with! So only do this if you don\'t mind your account being banned!';
 
-  private _proxyConfig: any = null;
+  private _proxyConfig: unknown = null;
 
   constructor(videoId: string) {
     super(videoId);
   }
 
-  withProxyConfig(proxyConfig: any): RequestBlocked {
+  withProxyConfig(proxyConfig: unknown): RequestBlocked {
     this._proxyConfig = proxyConfig;
     return this;
   }
@@ -193,9 +204,9 @@ export class FailedToCreateConsentCookie extends CouldNotRetrieveTranscript {
 
 export class NoTranscriptFound extends CouldNotRetrieveTranscript {
   public readonly requestedLanguageCodes: string[];
-  public readonly transcriptData: any;
+  public readonly transcriptData: string;
 
-  constructor(videoId: string, requestedLanguageCodes: string[], transcriptData: any) {
+  constructor(videoId: string, requestedLanguageCodes: string[], transcriptData: string) {
     super(videoId);
     this.requestedLanguageCodes = requestedLanguageCodes;
     this.transcriptData = transcriptData;

@@ -1,4 +1,4 @@
-import { parseString } from 'xml2js';
+import { XMLParser } from 'fast-xml-parser';
 import { FetchedTranscriptSnippet } from './models';
 import { TranscriptParseError } from '../errors';
 
@@ -35,15 +35,20 @@ export class TranscriptParser {
    */
   async parse(rawData: string): Promise<FetchedTranscriptSnippet[]> {
     try {
-      const xmlDoc = await this.parseXml(rawData);
+      const parser = new XMLParser({
+        ignoreAttributes: false,
+        isArray: (name) => name === 'text',
+      });
+      const xmlDoc = parser.parse(rawData);
       const snippets: FetchedTranscriptSnippet[] = [];
 
       if (xmlDoc && xmlDoc.transcript && xmlDoc.transcript.text) {
         for (const element of xmlDoc.transcript.text) {
-          if (element._) {
-            const text = this.cleanText(element._);
-            const start = parseFloat(element.$.start || '0');
-            const duration = parseFloat(element.$.dur || '0');
+          const textContent = element['#text'];
+          if (textContent !== undefined && textContent !== null) {
+            const text = this.cleanText(String(textContent));
+            const start = parseFloat(element['@_start'] || '0');
+            const duration = parseFloat(element['@_dur'] || '0');
 
             snippets.push(new FetchedTranscriptSnippet(text, start, duration));
           }
@@ -57,21 +62,6 @@ export class TranscriptParser {
         error instanceof Error ? error : undefined
       );
     }
-  }
-
-  /**
-   * Parse XML string into object
-   */
-  private parseXml(xmlString: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      parseString(xmlString, { explicitArray: false }, (err, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
-      });
-    });
   }
 
   /**

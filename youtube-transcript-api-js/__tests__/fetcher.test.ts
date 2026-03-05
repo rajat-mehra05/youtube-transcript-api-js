@@ -310,7 +310,7 @@ describe('TranscriptListFetcher', () => {
     it('should retry when bot detected and retries configured', async () => {
       const fetcherWithRetries = new TranscriptListFetcher(mockHttpClient, {
         retriesWhenBlocked: 2,
-      });
+      } as any);
 
       mockHttpClient.get
         .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML })

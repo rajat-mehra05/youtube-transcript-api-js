@@ -1,4 +1,4 @@
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosInstance } from 'axios';
 import {
   NotTranslatable,
   TranslationLanguageNotAvailable,
@@ -195,12 +195,12 @@ export class Transcript {
   public readonly translationLanguages: TranslationLanguage[];
   public readonly metadata: VideoMetadata | undefined;
 
-  private readonly httpClient: any;
+  private readonly httpClient: AxiosInstance;
   private readonly url: string;
   private readonly translationLanguagesDict: Map<string, string>;
 
   constructor(
-    httpClient: any,
+    httpClient: AxiosInstance,
     videoId: string,
     url: string,
     language: string,

@@ -4,6 +4,20 @@ import { GenericProxyConfig, WebshareProxyConfig, ProxyConfig } from '../proxies
 import { FormatterLoader } from '../formatters';
 import { TranscriptList, FetchedTranscript } from '../transcripts/models';
 
+interface CliOptions {
+  videoIds?: string[];
+  listTranscripts?: boolean;
+  languages: string[];
+  excludeGenerated?: boolean;
+  excludeManuallyCreated?: boolean;
+  format: string;
+  translate?: string;
+  webshareProxyUsername?: string;
+  webshareProxyPassword?: string;
+  httpProxy?: string;
+  httpsProxy?: string;
+}
+
 /**
  * CLI class for YouTube Transcript API
  */
@@ -81,7 +95,7 @@ export class YouTubeTranscriptCli {
   /**
    * Handle the main command
    */
-  private async handleCommand(videoIds: string[], options: any): Promise<void> {
+  private async handleCommand(videoIds: string[], options: CliOptions): Promise<void> {
     try {
       // Commander.js passes arguments differently - check if videoIds is actually the options
       if (Array.isArray(videoIds) && videoIds.length > 0 && typeof videoIds[0] === 'string' && !videoIds[0].startsWith('--')) {
@@ -141,7 +155,7 @@ export class YouTubeTranscriptCli {
   /**
    * Create proxy configuration from options
    */
-  private createProxyConfig(options: any): ProxyConfig | undefined {
+  private createProxyConfig(options: CliOptions): ProxyConfig | undefined {
     if (options.webshareProxyUsername || options.webshareProxyPassword) {
       return new WebshareProxyConfig(
         options.webshareProxyUsername || '',
@@ -162,7 +176,7 @@ export class YouTubeTranscriptCli {
   private async fetchTranscript(
     api: YouTubeTranscriptApi,
     videoId: string,
-    options: any
+    options: CliOptions
   ): Promise<FetchedTranscript> {
     const transcriptList = await api.list(videoId);
     let transcript;
@@ -190,7 +204,7 @@ export class YouTubeTranscriptCli {
   private printResults(
     results: (TranscriptList | FetchedTranscript)[],
     errors: Error[],
-    options: any
+    options: CliOptions
   ): void {
     const outputSections: string[] = [];
 

@@ -218,6 +218,37 @@ console.log(formatter.formatTranscript(transcript, { groupBySeconds: 60 }));
 // [1:00] Next minute of content ...
 ```
 
+### Custom Formatters
+
+Extend the `Formatter` base class to create your own output format:
+
+```typescript
+import { Formatter, FetchedTranscript, FormatterOptions } from 'youtube-transcript-api-js';
+
+class MarkdownFormatter extends Formatter {
+  formatTranscript(transcript: FetchedTranscript, options: FormatterOptions = {}): string {
+    return transcript.snippets
+      .map(s => `- **${this.toTimestamp(s.start)}** ${s.text}`)
+      .join('\n');
+  }
+
+  formatTranscripts(transcripts: FetchedTranscript[], options: FormatterOptions = {}): string {
+    return transcripts.map(t => this.formatTranscript(t, options)).join('\n\n---\n\n');
+  }
+
+  private toTimestamp(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+}
+
+const formatter = new MarkdownFormatter();
+console.log(formatter.formatTranscript(transcript));
+// - **0:00** Hello world
+// - **0:05** This is a test
+```
+
 ## Proxy Support
 
 ### Generic Proxy
