@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsup';
+import pkg from './package.json';
 
 export default defineConfig([
   // Main library build (CJS + ESM)
@@ -26,6 +27,9 @@ export default defineConfig([
     outDir: 'dist',
     target: 'es2020',
     minify: false,
+    define: {
+      'process.env.PACKAGE_VERSION': JSON.stringify(pkg.version),
+    },
     external: ['axios', 'commander', 'html-entities', 'http-proxy-agent', 'https-proxy-agent', 'xml2js'],
   },
 ]);

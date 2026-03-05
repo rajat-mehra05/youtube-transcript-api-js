@@ -34,12 +34,19 @@ export {
   PoTokenRequired,
   CookieError,
   CookiePathInvalid,
-  CookieInvalid
+  CookieInvalid,
+  InvalidProxyUrl,
+  TranscriptParseError,
+  RateLimitExceeded,
+  NetworkError,
+  TimeoutError,
+  ConnectionError
 } from './errors';
 
 // Formatter exports
 export {
   Formatter,
+  FormatterOptions,
   PrettyPrintFormatter,
   JSONFormatter,
   TextFormatter,

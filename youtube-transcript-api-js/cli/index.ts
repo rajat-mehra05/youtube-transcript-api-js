@@ -26,7 +26,7 @@ export class YouTubeTranscriptCli {
         'It also works for automatically generated subtitles and it does not require a headless browser, ' +
         'like other selenium based solutions do!'
       )
-      .version('1.0.0')
+      .version(process.env.PACKAGE_VERSION || '0.0.0')
       .argument('[video-ids...]', 'List of YouTube video IDs')
       .option(
         '--list-transcripts',
