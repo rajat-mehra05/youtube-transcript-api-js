@@ -7,16 +7,28 @@
 - Tightened `any` types across codebase (`ProxyConfig`, `AxiosInstance`, `FormatterOptions`, `CliOptions`, `FetchedTranscriptSnippet`)
 - `CouldNotRetrieveTranscript.message` now returns the full error message (previously empty; only `toString()` worked)
 - `TranscriptParser.parse()` now throws `TranscriptParseError` for non-transcript input instead of silently returning `[]`
+- Retry logic now uses exponential backoff with jitter instead of immediate recursive retry. Configurable via `RetryConfig`. Set `baseDelayMs: 0` to restore previous behavior
+- `AgeRestricted` error message now includes instructions for using `cookiePath` / `--cookies`
+- Consent cookie handling now appends to existing cookies instead of overwriting them
 
 ### Fixed
 - Removed stray `console.log` debug output from CLI `fetchTranscript` path
 - CLI `process.argv` fallback no longer captures option values (e.g. `--format json`) as video IDs
 
 ### Added
+- **Cookie authentication**: Load cookies from Netscape `.txt` or JSON files for age-restricted videos via `cookiePath` option or `--cookies` CLI flag
+- **Retry with exponential backoff**: Configurable `RetryConfig` with `maxRetries`, `baseDelayMs`, `maxDelayMs`, `jitterFactor`. Retries on `RateLimitExceeded`, `NetworkError`, `TimeoutError`, `ConnectionError`, `RequestBlocked`
+- **`YouTubeTranscriptApiOptions`**: Options object as 3rd constructor parameter for `YouTubeTranscriptApi` (`retryConfig`, `cookiePath`)
+- CLI `--cookies <file>` flag for cookie-based authentication
+- CLI `--verbose` flag for debug output to stderr
+- CLI `--save <file>` flag to write output to a file
+- CLI `--batch-file <file>` flag to read video IDs from a file
+- CLI `--fail-fast` flag to stop on the first error
 - `FormatterOptions` interface for typed formatter configuration
 - `CliOptions` interface for typed CLI option handling
 - Custom formatter documentation in README
 - Exported missing error types: `InvalidProxyUrl`, `TranscriptParseError`, `RateLimitExceeded`, `NetworkError`, `TimeoutError`, `ConnectionError`
+- Exported: `RetryConfig`, `DEFAULT_RETRY_CONFIG`, `loadCookiesFromFile`, `ParsedCookie`
 
 ### Removed
 - `xml2js` and `@types/xml2js` dependencies

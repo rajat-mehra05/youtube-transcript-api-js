@@ -16,6 +16,7 @@ import {
   TimeoutError,
   ConnectionError
 } from '../errors';
+import { RetryConfig, DEFAULT_RETRY_CONFIG, isRetryableError, calculateDelay, sleep } from '../retry';
 
 /**
  * Constants for YouTube API
@@ -115,10 +116,16 @@ function wrapNetworkError(error: unknown, url: string, videoId: string): never {
 export class TranscriptListFetcher {
   private readonly httpClient: AxiosInstance;
   private readonly proxyConfig: ProxyConfig | undefined;
+  private readonly retryConfig: RetryConfig;
 
-  constructor(httpClient: AxiosInstance, proxyConfig?: ProxyConfig) {
+  constructor(httpClient: AxiosInstance, proxyConfig?: ProxyConfig, retryConfig?: Partial<RetryConfig>) {
     this.httpClient = httpClient;
     this.proxyConfig = proxyConfig;
+
+    const effectiveMaxRetries = retryConfig?.maxRetries
+      ?? (proxyConfig?.retriesWhenBlocked || DEFAULT_RETRY_CONFIG.maxRetries);
+
+    this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig, maxRetries: effectiveMaxRetries };
   }
 
   /**
@@ -130,24 +137,35 @@ export class TranscriptListFetcher {
   }
 
   /**
-   * Fetch captions JSON data from YouTube
+   * Fetch captions JSON data from YouTube with retry + exponential backoff
    */
-  private async fetchCaptionsJson(videoId: string, tryNumber: number = 0): Promise<{ captionsJson: Record<string, unknown>; videoDetails?: VideoMetadata }> {
-    try {
-      const html = await this.fetchVideoHtml(videoId);
-      const apiKey = this.extractInnertubeApiKey(html, videoId);
-      const innertubeData = await this.fetchInnertubeData(videoId, apiKey);
-      return this.extractCaptionsJson(innertubeData, videoId);
-    } catch (error) {
-      if (error instanceof RequestBlocked) {
-        const retries = this.proxyConfig?.retriesWhenBlocked || 0;
-        if (tryNumber + 1 < retries) {
-          return this.fetchCaptionsJson(videoId, tryNumber + 1);
+  private async fetchCaptionsJson(videoId: string): Promise<{ captionsJson: Record<string, unknown>; videoDetails?: VideoMetadata }> {
+    const maxAttempts = this.retryConfig.maxRetries + 1;
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const html = await this.fetchVideoHtml(videoId);
+        const apiKey = this.extractInnertubeApiKey(html, videoId);
+        const innertubeData = await this.fetchInnertubeData(videoId, apiKey);
+        return this.extractCaptionsJson(innertubeData, videoId);
+      } catch (error) {
+        lastError = error;
+
+        if (!isRetryableError(error) || attempt === maxAttempts - 1) {
+          if (error instanceof RequestBlocked) {
+            throw error.withProxyConfig(this.proxyConfig);
+          }
+          throw error;
         }
-        throw error.withProxyConfig(this.proxyConfig);
+
+        const retryAfter = error instanceof RateLimitExceeded ? error.retryAfter : undefined;
+        const delay = calculateDelay(attempt, this.retryConfig, retryAfter);
+        await sleep(delay);
       }
-      throw error;
     }
+
+    throw lastError;
   }
 
   /**
@@ -224,8 +242,12 @@ export class TranscriptListFetcher {
       throw new FailedToCreateConsentCookie(videoId);
     }
     
-    // Set cookie in the HTTP client
-    this.httpClient.defaults.headers.cookie = `CONSENT=YES+${match[1]}; Domain=.youtube.com`;
+    // Append consent cookie (preserve existing cookies e.g. user-supplied auth cookies)
+    const consentCookie = `CONSENT=YES+${match[1]}`;
+    const existing = this.httpClient.defaults.headers.cookie;
+    this.httpClient.defaults.headers.cookie = existing
+      ? `${existing}; ${consentCookie}`
+      : consentCookie;
   }
 
   /**

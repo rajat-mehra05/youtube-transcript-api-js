@@ -336,7 +336,7 @@ describe('YouTubeTranscriptCli', () => {
 
       await cli.run(['test123']);
 
-      expect(YouTubeTranscriptApi).toHaveBeenCalledWith(undefined);
+      expect(YouTubeTranscriptApi).toHaveBeenCalledWith(undefined, undefined, undefined);
     });
 
     it('should prioritize webshare proxy over generic proxy', async () => {
@@ -434,6 +434,162 @@ describe('YouTubeTranscriptCli', () => {
       expect(mockApi.list).toHaveBeenCalledWith('fallbackVideo');
     });
 
+  });
+
+  describe('--cookies flag', () => {
+    it('should pass cookiePath to YouTubeTranscriptApi options', async () => {
+      const mockTranscriptList = createMockTranscriptList('test123');
+      const mockFetchedTranscript = createMockTranscript('test123');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['test123', '--cookies', '/path/to/cookies.txt']);
+
+      expect(YouTubeTranscriptApi).toHaveBeenCalledWith(
+        undefined, undefined, { cookiePath: '/path/to/cookies.txt' }
+      );
+    });
+  });
+
+  describe('--verbose flag', () => {
+    it('should write debug output to stderr', async () => {
+      const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      const mockTranscriptList = createMockTranscriptList('test123');
+      const mockFetchedTranscript = createMockTranscript('test123');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['test123', '--verbose']);
+
+      const stderrCalls = stderrSpy.mock.calls.map(c => c[0]);
+      expect(stderrCalls.some(c => typeof c === 'string' && c.includes('[verbose]'))).toBe(true);
+      expect(stderrCalls.some(c => typeof c === 'string' && c.includes('Fetching transcript for: test123'))).toBe(true);
+
+      stderrSpy.mockRestore();
+    });
+
+    it('should not write verbose output without flag', async () => {
+      const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      const mockTranscriptList = createMockTranscriptList('test123');
+      const mockFetchedTranscript = createMockTranscript('test123');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['test123']);
+
+      const stderrCalls = stderrSpy.mock.calls.map(c => c[0]);
+      expect(stderrCalls.some(c => typeof c === 'string' && c.includes('[verbose]'))).toBe(false);
+
+      stderrSpy.mockRestore();
+    });
+  });
+
+  describe('--save flag', () => {
+    it('should write output to file instead of stdout', async () => {
+      const fsMock = require('fs') as jest.Mocked<typeof import('fs')>;
+      fsMock.writeFileSync = jest.fn();
+
+      const mockTranscriptList = createMockTranscriptList('test123');
+      const mockFetchedTranscript = createMockTranscript('test123');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['test123', '--save', '/tmp/output.txt']);
+
+      expect(fsMock.writeFileSync).toHaveBeenCalledWith(
+        '/tmp/output.txt', expect.any(String), 'utf-8'
+      );
+      // Should NOT write to stdout when saving to file
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('--batch-file flag', () => {
+    it('should read video IDs from file', async () => {
+      const fsMock = require('fs') as jest.Mocked<typeof import('fs')>;
+      fsMock.existsSync = jest.fn().mockReturnValue(true);
+      fsMock.readFileSync = jest.fn().mockReturnValue('video1\nvideo2\n# comment\n\nvideo3\n');
+
+      const mockTranscriptList = createMockTranscriptList('video1');
+      const mockFetchedTranscript = createMockTranscript('video1');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['--batch-file', '/tmp/ids.txt']);
+
+      // Should have called list for video1, video2, video3 (not comment or blank)
+      expect(mockApi.list).toHaveBeenCalledTimes(3);
+      expect(mockApi.list).toHaveBeenCalledWith('video1');
+      expect(mockApi.list).toHaveBeenCalledWith('video2');
+      expect(mockApi.list).toHaveBeenCalledWith('video3');
+    });
+
+    it('should merge batch file IDs with command-line IDs', async () => {
+      const fsMock = require('fs') as jest.Mocked<typeof import('fs')>;
+      fsMock.existsSync = jest.fn().mockReturnValue(true);
+      fsMock.readFileSync = jest.fn().mockReturnValue('batchVideo\n');
+
+      const mockTranscriptList = createMockTranscriptList('cliVideo');
+      const mockFetchedTranscript = createMockTranscript('cliVideo');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['cliVideo', '--batch-file', '/tmp/ids.txt']);
+
+      expect(mockApi.list).toHaveBeenCalledTimes(2);
+      expect(mockApi.list).toHaveBeenCalledWith('cliVideo');
+      expect(mockApi.list).toHaveBeenCalledWith('batchVideo');
+    });
+
+    it('should error if batch file does not exist', async () => {
+      const fsMock = require('fs') as jest.Mocked<typeof import('fs')>;
+      fsMock.existsSync = jest.fn().mockReturnValue(false);
+
+      try {
+        await cli.run(['--batch-file', '/nonexistent.txt']);
+      } catch (e: any) {
+        expect(e.message).toBe('process.exit(1)');
+      }
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error: Batch file not found: /nonexistent.txt');
+    });
+  });
+
+  describe('--fail-fast flag', () => {
+    it('should stop on first error when --fail-fast is set', async () => {
+      mockApi.list
+        .mockRejectedValueOnce(new Error('Failed for video1'))
+        .mockResolvedValueOnce(createMockTranscriptList('video2'));
+
+      await cli.run(['video1', 'video2', '--fail-fast']);
+
+      // Should only have called list once (stopped after first error)
+      expect(mockApi.list).toHaveBeenCalledTimes(1);
+    });
+
+    it('should continue on error without --fail-fast (default)', async () => {
+      const mockTranscriptList = createMockTranscriptList('video2');
+      const mockFetchedTranscript = createMockTranscript('video2');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+
+      mockApi.list
+        .mockRejectedValueOnce(new Error('Failed for video1'))
+        .mockResolvedValueOnce(mockTranscriptList);
+
+      await cli.run(['video1', 'video2']);
+
+      // Should have called list for both videos
+      expect(mockApi.list).toHaveBeenCalledTimes(2);
+    });
   });
 });
 
