@@ -27,7 +27,7 @@ export class YouTubeTranscriptApi {
 
     if (options?.cookiePath) {
       const cookieHeader = loadCookiesFromFile(options.cookiePath);
-      client.defaults.headers.cookie = cookieHeader;
+      client.defaults.headers.common['Cookie'] = cookieHeader;
     }
 
     this.fetcher = new TranscriptListFetcher(client, proxyConfig, options?.retryConfig);

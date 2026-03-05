@@ -14,15 +14,16 @@ export interface ParsedCookie {
   expiry: number;
 }
 
-/** Domains that YouTube authentication cookies can belong to */
-const YOUTUBE_DOMAINS = ['.youtube.com', 'youtube.com', '.google.com', 'google.com'];
+/** Canonical domains that YouTube authentication cookies can belong to */
+const YOUTUBE_DOMAINS = ['youtube.com', 'google.com'];
 
 /**
- * Check if a cookie domain is relevant for YouTube authentication
+ * Check if a cookie domain is relevant for YouTube authentication.
+ * Strips leading dot (cookie-file convention) and requires exact or proper subdomain match.
  */
 function isYouTubeDomain(domain: string): boolean {
-  const normalized = domain.toLowerCase();
-  return YOUTUBE_DOMAINS.some(yt => normalized === yt || normalized.endsWith(yt));
+  const normalized = domain.toLowerCase().replace(/^\./, '');
+  return YOUTUBE_DOMAINS.some(yt => normalized === yt || normalized.endsWith('.' + yt));
 }
 
 /**
@@ -100,11 +101,15 @@ export function formatCookieHeader(cookies: ParsedCookie[]): string {
  * @throws CookieInvalid if no YouTube cookies are found or parsing fails
  */
 export function loadCookiesFromFile(cookiePath: string): string {
-  if (!fs.existsSync(cookiePath)) {
-    throw new CookiePathInvalid(cookiePath);
+  let content: string;
+  try {
+    content = fs.readFileSync(cookiePath, 'utf-8');
+  } catch (err: any) {
+    if (err.code === 'ENOENT') {
+      throw new CookiePathInvalid(cookiePath);
+    }
+    throw err;
   }
-
-  const content = fs.readFileSync(cookiePath, 'utf-8');
   const ext = path.extname(cookiePath).toLowerCase();
 
   const cookies = ext === '.json'

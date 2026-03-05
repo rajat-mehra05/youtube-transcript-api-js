@@ -320,23 +320,26 @@ describe('TranscriptListFetcher', () => {
 
     it('should retry when bot detected and retries configured', async () => {
       jest.useFakeTimers();
-      const fetcherWithRetries = new TranscriptListFetcher(mockHttpClient, new MockProxyConfig(2));
+      try {
+        const fetcherWithRetries = new TranscriptListFetcher(mockHttpClient, new MockProxyConfig(2));
 
-      mockHttpClient.get
-        .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML })
-        .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
-      mockHttpClient.post
-        .mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED })
-        .mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });
+        mockHttpClient.get
+          .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML })
+          .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+        mockHttpClient.post
+          .mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED })
+          .mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });
 
-      const fetchPromise = fetcherWithRetries.fetch(TEST_VIDEO_ID);
-      await jest.advanceTimersByTimeAsync(60000);
-      const result = await fetchPromise;
+        const fetchPromise = fetcherWithRetries.fetch(TEST_VIDEO_ID);
+        await jest.advanceTimersByTimeAsync(60000);
+        const result = await fetchPromise;
 
-      expect(result).toBeDefined();
-      expect(mockHttpClient.get).toHaveBeenCalledTimes(2);
-      expect(mockHttpClient.post).toHaveBeenCalledTimes(2);
-      jest.useRealTimers();
+        expect(result).toBeDefined();
+        expect(mockHttpClient.get).toHaveBeenCalledTimes(2);
+        expect(mockHttpClient.post).toHaveBeenCalledTimes(2);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
@@ -389,7 +392,7 @@ describe('TranscriptListFetcher', () => {
       const result = await fetcher.fetch(TEST_VIDEO_ID);
 
       expect(result).toBeDefined();
-      expect(mockHttpClient.defaults.headers.cookie).toContain('CONSENT=YES+abc123consent');
+      expect(mockHttpClient.defaults.headers.common['Cookie']).toContain('CONSENT=YES+abc123consent');
       expect(mockHttpClient.get).toHaveBeenCalledTimes(2);
     });
 

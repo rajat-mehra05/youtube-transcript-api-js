@@ -123,7 +123,7 @@ export class TranscriptListFetcher {
     this.proxyConfig = proxyConfig;
 
     const effectiveMaxRetries = retryConfig?.maxRetries
-      ?? (proxyConfig?.retriesWhenBlocked || DEFAULT_RETRY_CONFIG.maxRetries);
+      ?? (proxyConfig?.retriesWhenBlocked ?? DEFAULT_RETRY_CONFIG.maxRetries);
 
     this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig, maxRetries: effectiveMaxRetries };
   }
@@ -244,8 +244,8 @@ export class TranscriptListFetcher {
     
     // Append consent cookie (preserve existing cookies e.g. user-supplied auth cookies)
     const consentCookie = `CONSENT=YES+${match[1]}`;
-    const existing = this.httpClient.defaults.headers.cookie;
-    this.httpClient.defaults.headers.cookie = existing
+    const existing = this.httpClient.defaults.headers.common['Cookie'];
+    this.httpClient.defaults.headers.common['Cookie'] = existing
       ? `${existing}; ${consentCookie}`
       : consentCookie;
   }

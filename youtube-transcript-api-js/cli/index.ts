@@ -5,7 +5,7 @@ import { GenericProxyConfig, WebshareProxyConfig, ProxyConfig } from '../proxies
 import { FormatterLoader } from '../formatters';
 import { TranscriptList, FetchedTranscript } from '../transcripts/models';
 
-interface CliOptions {
+export interface CliOptions {
   videoIds?: string[];
   listTranscripts?: boolean;
   languages: string[];
@@ -217,6 +217,10 @@ export class YouTubeTranscriptCli {
       }
 
       this.outputResults(results, errors, options);
+
+      if (options.failFast && errors.length > 0) {
+        process.exit(1);
+      }
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);

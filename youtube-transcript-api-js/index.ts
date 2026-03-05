@@ -62,6 +62,9 @@ export {
   FormatterLoader
 } from './formatters';
 
+// CLI exports
+export type { CliOptions } from './cli';
+
 // Proxy exports
 export {
   ProxyConfig,

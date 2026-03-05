@@ -1,4 +1,5 @@
 import { AxiosInstance } from 'axios';
+import * as fs from 'fs';
 import { YouTubeTranscriptCli, main } from '../cli/index';
 import { YouTubeTranscriptApi } from '../api';
 import { FormatterLoader } from '../formatters';
@@ -7,6 +8,10 @@ import { GenericProxyConfig, WebshareProxyConfig } from '../proxies';
 
 // Mock the API module
 jest.mock('../api');
+
+// Mock fs module
+jest.mock('fs');
+const mockFs = fs as jest.Mocked<typeof fs>;
 
 // Mock the formatters module
 jest.mock('../formatters', () => ({
@@ -491,8 +496,7 @@ describe('YouTubeTranscriptCli', () => {
 
   describe('--save flag', () => {
     it('should write output to file instead of stdout', async () => {
-      const fsMock = require('fs') as jest.Mocked<typeof import('fs')>;
-      fsMock.writeFileSync = jest.fn();
+      mockFs.writeFileSync.mockImplementation(() => {});
 
       const mockTranscriptList = createMockTranscriptList('test123');
       const mockFetchedTranscript = createMockTranscript('test123');
@@ -502,7 +506,7 @@ describe('YouTubeTranscriptCli', () => {
 
       await cli.run(['test123', '--save', '/tmp/output.txt']);
 
-      expect(fsMock.writeFileSync).toHaveBeenCalledWith(
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         '/tmp/output.txt', expect.any(String), 'utf-8'
       );
       // Should NOT write to stdout when saving to file
@@ -512,9 +516,8 @@ describe('YouTubeTranscriptCli', () => {
 
   describe('--batch-file flag', () => {
     it('should read video IDs from file', async () => {
-      const fsMock = require('fs') as jest.Mocked<typeof import('fs')>;
-      fsMock.existsSync = jest.fn().mockReturnValue(true);
-      fsMock.readFileSync = jest.fn().mockReturnValue('video1\nvideo2\n# comment\n\nvideo3\n');
+      mockFs.existsSync.mockReturnValue(true);
+      (mockFs.readFileSync as jest.Mock).mockReturnValue('video1\nvideo2\n# comment\n\nvideo3\n');
 
       const mockTranscriptList = createMockTranscriptList('video1');
       const mockFetchedTranscript = createMockTranscript('video1');
@@ -532,9 +535,8 @@ describe('YouTubeTranscriptCli', () => {
     });
 
     it('should merge batch file IDs with command-line IDs', async () => {
-      const fsMock = require('fs') as jest.Mocked<typeof import('fs')>;
-      fsMock.existsSync = jest.fn().mockReturnValue(true);
-      fsMock.readFileSync = jest.fn().mockReturnValue('batchVideo\n');
+      mockFs.existsSync.mockReturnValue(true);
+      (mockFs.readFileSync as jest.Mock).mockReturnValue('batchVideo\n');
 
       const mockTranscriptList = createMockTranscriptList('cliVideo');
       const mockFetchedTranscript = createMockTranscript('cliVideo');
@@ -550,8 +552,7 @@ describe('YouTubeTranscriptCli', () => {
     });
 
     it('should error if batch file does not exist', async () => {
-      const fsMock = require('fs') as jest.Mocked<typeof import('fs')>;
-      fsMock.existsSync = jest.fn().mockReturnValue(false);
+      mockFs.existsSync.mockReturnValue(false);
 
       try {
         await cli.run(['--batch-file', '/nonexistent.txt']);
@@ -564,15 +565,20 @@ describe('YouTubeTranscriptCli', () => {
   });
 
   describe('--fail-fast flag', () => {
-    it('should stop on first error when --fail-fast is set', async () => {
+    it('should stop on first error and exit non-zero when --fail-fast is set', async () => {
       mockApi.list
         .mockRejectedValueOnce(new Error('Failed for video1'))
         .mockResolvedValueOnce(createMockTranscriptList('video2'));
 
-      await cli.run(['video1', 'video2', '--fail-fast']);
+      try {
+        await cli.run(['video1', 'video2', '--fail-fast']);
+      } catch (e: any) {
+        expect(e.message).toBe('process.exit(1)');
+      }
 
       // Should only have called list once (stopped after first error)
       expect(mockApi.list).toHaveBeenCalledTimes(1);
+      expect(processExitSpy).toHaveBeenCalledWith(1);
     });
 
     it('should continue on error without --fail-fast (default)', async () => {

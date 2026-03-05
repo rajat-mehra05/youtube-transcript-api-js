@@ -48,7 +48,7 @@ export function calculateDelay(
   const exponentialDelay = config.baseDelayMs * Math.pow(2, attempt);
   const cappedDelay = Math.min(exponentialDelay, config.maxDelayMs);
   const jitter = cappedDelay * config.jitterFactor * (Math.random() * 2 - 1);
-  return Math.max(0, Math.floor(cappedDelay + jitter));
+  return Math.min(Math.max(0, Math.floor(cappedDelay + jitter)), config.maxDelayMs);
 }
 
 /**

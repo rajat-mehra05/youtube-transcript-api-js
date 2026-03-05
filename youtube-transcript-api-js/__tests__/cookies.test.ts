@@ -123,12 +123,18 @@ describe('loadCookiesFromFile', () => {
   });
 
   it('should throw CookiePathInvalid for nonexistent file', () => {
-    mockFs.existsSync.mockReturnValue(false);
+    const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    mockFs.readFileSync.mockImplementation(() => { throw enoent; });
     expect(() => loadCookiesFromFile('/nonexistent/cookies.txt')).toThrow(CookiePathInvalid);
   });
 
+  it('should rethrow non-ENOENT fs errors', () => {
+    const eperm = Object.assign(new Error('EPERM'), { code: 'EPERM' });
+    mockFs.readFileSync.mockImplementation(() => { throw eperm; });
+    expect(() => loadCookiesFromFile('/path/to/cookies.txt')).toThrow('EPERM');
+  });
+
   it('should auto-detect Netscape format for .txt extension', () => {
-    mockFs.existsSync.mockReturnValue(true);
     mockFs.readFileSync.mockReturnValue(VALID_NETSCAPE);
 
     const header = loadCookiesFromFile('/path/to/cookies.txt');
@@ -139,7 +145,6 @@ describe('loadCookiesFromFile', () => {
   });
 
   it('should auto-detect JSON format for .json extension', () => {
-    mockFs.existsSync.mockReturnValue(true);
     mockFs.readFileSync.mockReturnValue(VALID_JSON);
 
     const header = loadCookiesFromFile('/path/to/cookies.json');
@@ -148,7 +153,6 @@ describe('loadCookiesFromFile', () => {
   });
 
   it('should filter to YouTube/Google domains only', () => {
-    mockFs.existsSync.mockReturnValue(true);
     mockFs.readFileSync.mockReturnValue(VALID_NETSCAPE);
 
     const header = loadCookiesFromFile('/path/to/cookies.txt');
@@ -159,14 +163,12 @@ describe('loadCookiesFromFile', () => {
 
   it('should throw CookieInvalid if no YouTube cookies found', () => {
     const nonYouTubeCookies = '.example.com\tTRUE\t/\tFALSE\t0\tFOO\tbar';
-    mockFs.existsSync.mockReturnValue(true);
     mockFs.readFileSync.mockReturnValue(nonYouTubeCookies);
 
     expect(() => loadCookiesFromFile('/path/to/cookies.txt')).toThrow(CookieInvalid);
   });
 
   it('should default to Netscape format for unknown extensions', () => {
-    mockFs.existsSync.mockReturnValue(true);
     mockFs.readFileSync.mockReturnValue(VALID_NETSCAPE);
 
     const header = loadCookiesFromFile('/path/to/cookies');
