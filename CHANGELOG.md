@@ -6,6 +6,11 @@
 - Replaced `xml2js` with `fast-xml-parser` — ~2.8MB smaller install, faster parsing, built-in TypeScript types
 - Tightened `any` types across codebase (`ProxyConfig`, `AxiosInstance`, `FormatterOptions`, `CliOptions`, `FetchedTranscriptSnippet`)
 - `CouldNotRetrieveTranscript.message` now returns the full error message (previously empty; only `toString()` worked)
+- `TranscriptParser.parse()` now throws `TranscriptParseError` for non-transcript input instead of silently returning `[]`
+
+### Fixed
+- Removed stray `console.log` debug output from CLI `fetchTranscript` path
+- CLI `process.argv` fallback no longer captures option values (e.g. `--format json`) as video IDs
 
 ### Added
 - `FormatterOptions` interface for typed formatter configuration

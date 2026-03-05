@@ -165,11 +165,10 @@ describe('TranscriptParser', () => {
         }
       });
 
-      it('should return empty array for completely invalid input', async () => {
+      it('should throw TranscriptParseError for completely invalid input', async () => {
         const parser = new TranscriptParser();
 
-        const result = await parser.parse('not xml at all {');
-        expect(result).toEqual([]);
+        await expect(parser.parse('not xml at all {')).rejects.toThrow(TranscriptParseError);
       });
     });
   });

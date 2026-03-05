@@ -42,7 +42,13 @@ export class TranscriptParser {
       const xmlDoc = parser.parse(rawData);
       const snippets: FetchedTranscriptSnippet[] = [];
 
-      if (xmlDoc && xmlDoc.transcript && xmlDoc.transcript.text) {
+      if (!xmlDoc || !('transcript' in xmlDoc)) {
+        throw new TranscriptParseError(
+          'Failed to parse transcript XML: no transcript data found in response'
+        );
+      }
+
+      if (xmlDoc.transcript && xmlDoc.transcript.text) {
         for (const element of xmlDoc.transcript.text) {
           const textContent = element['#text'];
           if (textContent !== undefined && textContent !== null) {
@@ -57,6 +63,7 @@ export class TranscriptParser {
 
       return snippets;
     } catch (error) {
+      if (error instanceof TranscriptParseError) throw error;
       throw new TranscriptParseError(
         `Failed to parse transcript XML: ${error}`,
         error instanceof Error ? error : undefined

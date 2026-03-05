@@ -104,9 +104,24 @@ export class YouTubeTranscriptCli {
         // Arguments might be in options
         videoIds = options.videoIds;
       } else {
-        // Try to get from process.argv
+        // Try to get from process.argv, skipping flags and their values
         const args = process.argv.slice(2);
-        const videoIdArgs = args.filter(arg => !arg.startsWith('--'));
+        const FLAGS_WITH_VALUES = new Set([
+          '--languages', '--format', '--translate',
+          '--webshare-proxy-username', '--webshare-proxy-password',
+          '--http-proxy', '--https-proxy',
+        ]);
+        const videoIdArgs: string[] = [];
+        for (let i = 0; i < args.length; i++) {
+          const arg = args[i]!;
+          if (arg.startsWith('--')) {
+            if (FLAGS_WITH_VALUES.has(arg)) {
+              i++; // skip the flag's value
+            }
+            continue;
+          }
+          videoIdArgs.push(arg);
+        }
         if (videoIdArgs.length > 0) {
           videoIds = videoIdArgs;
         }
@@ -193,9 +208,7 @@ export class YouTubeTranscriptCli {
       transcript = transcript.translate(options.translate);
     }
 
-    const fetched = await transcript.fetch();
-    console.log(fetched.snippets[0]?.text);
-    return fetched;
+    return transcript.fetch();
   }
 
   /**

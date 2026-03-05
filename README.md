@@ -223,7 +223,7 @@ console.log(formatter.formatTranscript(transcript, { groupBySeconds: 60 }));
 Extend the `Formatter` base class to create your own output format:
 
 ```typescript
-import { Formatter, FetchedTranscript, FormatterOptions } from 'youtube-transcript-api-js';
+import { YouTubeTranscriptApi, Formatter, FetchedTranscript, FormatterOptions } from 'youtube-transcript-api-js';
 
 class MarkdownFormatter extends Formatter {
   formatTranscript(transcript: FetchedTranscript, options: FormatterOptions = {}): string {
@@ -242,6 +242,10 @@ class MarkdownFormatter extends Formatter {
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 }
+
+// Usage:
+const api = new YouTubeTranscriptApi();
+const transcript = await api.fetch('VIDEO_ID');
 
 const formatter = new MarkdownFormatter();
 console.log(formatter.formatTranscript(transcript));
