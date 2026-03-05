@@ -30,14 +30,14 @@ export abstract class Formatter {
  */
 export class PrettyPrintFormatter extends Formatter {
   formatTranscript(transcript: FetchedTranscript, options: FormatterOptions = {}): string {
-    return JSON.stringify(transcript.toRawData(), null, 2);
+    return JSON.stringify(transcript.toRawData(), null, options.indent ?? 2);
   }
 
   formatTranscripts(transcripts: FetchedTranscript[], options: FormatterOptions = {}): string {
     return JSON.stringify(
       transcripts.map(t => t.toRawData()),
       null,
-      2
+      options.indent ?? 2
     );
   }
 }
