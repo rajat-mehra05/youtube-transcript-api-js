@@ -1,33 +1,43 @@
 import { FetchedTranscript, FetchedTranscriptSnippet } from '../transcripts/models';
 
 /**
+ * Options for formatting transcripts
+ */
+export interface FormatterOptions {
+  /** JSON indentation level (used by JSONFormatter) */
+  indent?: number;
+  /** Group snippets into time buckets of N seconds (used by TimestampedTextFormatter) */
+  groupBySeconds?: number;
+}
+
+/**
  * Base formatter class
  */
 export abstract class Formatter {
   /**
    * Format a single transcript
    */
-  abstract formatTranscript(transcript: FetchedTranscript, options?: any): string;
+  abstract formatTranscript(transcript: FetchedTranscript, options?: FormatterOptions): string;
 
   /**
    * Format multiple transcripts
    */
-  abstract formatTranscripts(transcripts: FetchedTranscript[], options?: any): string;
+  abstract formatTranscripts(transcripts: FetchedTranscript[], options?: FormatterOptions): string;
 }
 
 /**
  * Pretty print formatter
  */
 export class PrettyPrintFormatter extends Formatter {
-  formatTranscript(transcript: FetchedTranscript, options: any = {}): string {
-    return JSON.stringify(transcript.toRawData(), null, 2);
+  formatTranscript(transcript: FetchedTranscript, options: FormatterOptions = {}): string {
+    return JSON.stringify(transcript.toRawData(), null, options.indent ?? 2);
   }
 
-  formatTranscripts(transcripts: FetchedTranscript[], options: any = {}): string {
+  formatTranscripts(transcripts: FetchedTranscript[], options: FormatterOptions = {}): string {
     return JSON.stringify(
       transcripts.map(t => t.toRawData()),
       null,
-      2
+      options.indent ?? 2
     );
   }
 }
@@ -36,11 +46,11 @@ export class PrettyPrintFormatter extends Formatter {
  * JSON formatter
  */
 export class JSONFormatter extends Formatter {
-  formatTranscript(transcript: FetchedTranscript, options: any = {}): string {
+  formatTranscript(transcript: FetchedTranscript, options: FormatterOptions = {}): string {
     return JSON.stringify(transcript.toRawData(), null, options.indent || 0);
   }
 
-  formatTranscripts(transcripts: FetchedTranscript[], options: any = {}): string {
+  formatTranscripts(transcripts: FetchedTranscript[], options: FormatterOptions = {}): string {
     return JSON.stringify(
       transcripts.map(t => t.toRawData()),
       null,
@@ -53,11 +63,11 @@ export class JSONFormatter extends Formatter {
  * Plain text formatter
  */
 export class TextFormatter extends Formatter {
-  formatTranscript(transcript: FetchedTranscript, options: any = {}): string {
+  formatTranscript(transcript: FetchedTranscript, options: FormatterOptions = {}): string {
     return transcript.snippets.map(snippet => snippet.text).join('\n');
   }
 
-  formatTranscripts(transcripts: FetchedTranscript[], options: any = {}): string {
+  formatTranscripts(transcripts: FetchedTranscript[], options: FormatterOptions = {}): string {
     return transcripts
       .map(transcript => this.formatTranscript(transcript, options))
       .join('\n\n\n');
@@ -96,7 +106,7 @@ export abstract class TextBasedFormatter extends TextFormatter {
     return this.formatTimestamp(hours, mins, secs, ms);
   }
 
-  formatTranscript(transcript: FetchedTranscript, options: any = {}): string {
+  formatTranscript(transcript: FetchedTranscript, options: FormatterOptions = {}): string {
     const lines: string[] = [];
 
     for (let i = 0; i < transcript.snippets.length; i++) {
@@ -162,7 +172,7 @@ export class WebVTTFormatter extends TextBasedFormatter {
  * Supports grouping snippets into time buckets via groupBySeconds option
  */
 export class TimestampedTextFormatter extends Formatter {
-  formatTranscript(transcript: FetchedTranscript, options: any = {}): string {
+  formatTranscript(transcript: FetchedTranscript, options: FormatterOptions = {}): string {
     const snippets = transcript.snippets;
     if (snippets.length === 0) return '';
 
@@ -177,7 +187,7 @@ export class TimestampedTextFormatter extends Formatter {
       .join('\n');
   }
 
-  formatTranscripts(transcripts: FetchedTranscript[], options: any = {}): string {
+  formatTranscripts(transcripts: FetchedTranscript[], options: FormatterOptions = {}): string {
     return transcripts
       .map(t => this.formatTranscript(t, options))
       .join('\n\n\n');

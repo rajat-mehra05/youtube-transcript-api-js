@@ -195,6 +195,28 @@ console.log(srtFormatter.formatTranscript(transcript));
 | `text` | `TextFormatter` | Plain text (transcript only) |
 | `srt` | `SRTFormatter` | SubRip subtitle format |
 | `webvtt` | `WebVTTFormatter` | WebVTT subtitle format |
+| `timestamped` | `TimestampedTextFormatter` | LLM-friendly `[M:SS] text` format |
+
+### Timestamped Text Formatter
+
+Produces clean `[M:SS] text` output, ideal for feeding transcripts to LLMs. Supports grouping snippets into time buckets.
+
+```typescript
+import { TimestampedTextFormatter } from 'youtube-transcript-api-js';
+
+const formatter = new TimestampedTextFormatter();
+const transcript = await api.fetch('VIDEO_ID');
+
+// Default: one line per snippet
+console.log(formatter.formatTranscript(transcript));
+// [0:00] Hello world
+// [0:05] This is a transcript
+
+// Grouped: combine snippets into 60-second buckets
+console.log(formatter.formatTranscript(transcript, { groupBySeconds: 60 }));
+// [0:00] Hello world This is a transcript ...
+// [1:00] Next minute of content ...
+```
 
 ## Proxy Support
 
@@ -299,6 +321,15 @@ try {
 | http-proxy-agent | Proxy support |
 | Jest | Testing |
 
+## Contributing
+
+Contributions are welcome! Here's how you can help:
+
+- **Bug reports** — Open an [issue](https://github.com/rajat-mehra05/youtube-transcript-api-js/issues) with steps to reproduce
+- **Feature requests** — Open an [issue](https://github.com/rajat-mehra05/youtube-transcript-api-js/issues) to discuss your idea before submitting a PR
+- **Pull requests** — Fork the repo, create a branch, and submit a PR
+- **Questions & discussions** — Feel free to open an [issue](https://github.com/rajat-mehra05/youtube-transcript-api-js/issues) for general questions or discussions
+
 ## License
 
-MIT
+This project is licensed under the [MIT License](LICENSE).
