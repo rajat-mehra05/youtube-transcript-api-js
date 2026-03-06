@@ -220,6 +220,22 @@ describe('Formatters', () => {
 
       expect(result).toBe('\n');
     });
+
+    it('should handle zero-duration snippets', () => {
+      const snippets = [
+        new FetchedTranscriptSnippet('Flash text', 5.0, 0),
+        new FetchedTranscriptSnippet('Normal text', 10.0, 3.0)
+      ];
+      const zeroTranscript = new FetchedTranscript(snippets, 'zero', 'English', 'en', false);
+
+      const formatter = new SRTFormatter();
+      const result = formatter.formatTranscript(zeroTranscript);
+
+      // Zero duration: start and end timestamps are the same
+      expect(result).toContain('00:00:05,000 --> 00:00:05,000');
+      expect(result).toContain('Flash text');
+      expect(result).toContain('Normal text');
+    });
   });
 
   // ============================================
@@ -261,6 +277,21 @@ describe('Formatters', () => {
       const result = formatter.formatTranscript(longTranscript);
 
       expect(result).toContain('02:01:01.123');
+    });
+
+    it('should handle zero-duration snippets', () => {
+      const snippets = [
+        new FetchedTranscriptSnippet('Flash text', 5.0, 0),
+        new FetchedTranscriptSnippet('Normal text', 10.0, 3.0)
+      ];
+      const zeroTranscript = new FetchedTranscript(snippets, 'zero', 'English', 'en', false);
+
+      const formatter = new WebVTTFormatter();
+      const result = formatter.formatTranscript(zeroTranscript);
+
+      expect(result).toContain('WEBVTT');
+      expect(result).toContain('00:00:05.000 --> 00:00:05.000');
+      expect(result).toContain('Flash text');
     });
 
     it('should be an instance of Formatter', () => {
@@ -323,6 +354,19 @@ describe('Formatters', () => {
       const formatter = new TimestampedTextFormatter();
 
       expect(formatter.formatTranscript(emptyTranscript)).toBe('');
+    });
+
+    it('should handle zero-duration snippets', () => {
+      const snippets = [
+        new FetchedTranscriptSnippet('Flash text', 0, 0),
+        new FetchedTranscriptSnippet('Normal text', 5.0, 3.0)
+      ];
+      const zeroTranscript = new FetchedTranscript(snippets, 'zero', 'English', 'en', false);
+
+      const formatter = new TimestampedTextFormatter();
+      const result = formatter.formatTranscript(zeroTranscript);
+
+      expect(result).toBe('[0:00] Flash text\n[0:05] Normal text');
     });
 
     it('should treat groupBySeconds: 0 as no grouping', () => {

@@ -375,10 +375,19 @@ describe('TranscriptListFetcher', () => {
 
   describe('error handling - video unplayable', () => {
     it('should throw VideoUnplayable with reason and subreasons', async () => {
+      expect.assertions(4);
       mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
       mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_UNPLAYABLE });
 
-      await expect(fetcher.fetch(TEST_VIDEO_ID)).rejects.toThrow(VideoUnplayable);
+      try {
+        await fetcher.fetch(TEST_VIDEO_ID);
+      } catch (error) {
+        expect(error).toBeInstanceOf(VideoUnplayable);
+        const unplayable = error as VideoUnplayable;
+        expect(unplayable.reason).toBe('Video is private');
+        expect(unplayable.subReasons).toEqual(['This video is private.', 'Contact owner.']);
+        expect(unplayable.toString()).toContain('Additional Details');
+      }
     });
   });
 

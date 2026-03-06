@@ -23,6 +23,49 @@ import {
 } from './constants';
 import { wrapNetworkError } from './network-errors';
 
+/** Shape of a single caption track from the Innertube API */
+interface CaptionTrack {
+  baseUrl: string;
+  name: { runs: Array<{ text: string }> };
+  languageCode: string;
+  kind?: string;
+  isTranslatable?: boolean;
+}
+
+/** Shape of a translation language entry from the Innertube API */
+interface TranslationLanguageData {
+  languageName: { runs: Array<{ text: string }> };
+  languageCode: string;
+}
+
+/** Shape of the playerCaptionsTracklistRenderer object */
+interface CaptionsJson {
+  captionTracks?: CaptionTrack[];
+  translationLanguages?: TranslationLanguageData[];
+}
+
+/** Shape of the playabilityStatus object from the Innertube API */
+interface PlayabilityStatusData {
+  status?: string;
+  reason?: string;
+  errorScreen?: {
+    playerErrorMessageRenderer?: {
+      subreason?: {
+        runs?: Array<{ text?: string }>;
+      };
+    };
+  };
+}
+
+/** Shape of the Innertube API response */
+interface InnertubeResponse {
+  playabilityStatus?: PlayabilityStatusData;
+  captions?: {
+    playerCaptionsTracklistRenderer?: CaptionsJson;
+  };
+  videoDetails?: VideoMetadata;
+}
+
 /**
  * Handles fetching transcript lists from YouTube
  */
@@ -71,7 +114,7 @@ export class TranscriptListFetcher {
   /**
    * Fetch captions JSON data from YouTube with retry + exponential backoff
    */
-  private async fetchCaptionsJson(videoId: string): Promise<{ captionsJson: Record<string, unknown>; videoDetails?: VideoMetadata }> {
+  private async fetchCaptionsJson(videoId: string): Promise<{ captionsJson: CaptionsJson; videoDetails: VideoMetadata | undefined }> {
     const maxAttempts = this.retryConfig.maxRetries + 1;
     let lastError: unknown;
 
@@ -121,7 +164,7 @@ export class TranscriptListFetcher {
   /**
    * Extract captions JSON from Innertube data
    */
-  private extractCaptionsJson(innertubeData: Record<string, any>, videoId: string): { captionsJson: Record<string, any>; videoDetails?: VideoMetadata } {
+  private extractCaptionsJson(innertubeData: InnertubeResponse, videoId: string): { captionsJson: CaptionsJson; videoDetails: VideoMetadata | undefined } {
     this.assertPlayability(innertubeData.playabilityStatus, videoId);
 
     const captionsJson = innertubeData.captions?.playerCaptionsTracklistRenderer;
@@ -129,18 +172,18 @@ export class TranscriptListFetcher {
       throw new TranscriptsDisabled(videoId);
     }
 
-    return { captionsJson, videoDetails: innertubeData.videoDetails || undefined };
+    return { captionsJson, videoDetails: innertubeData.videoDetails ?? undefined };
   }
 
   /**
    * Assert video playability status
    */
-  private assertPlayability(playabilityStatusData: Record<string, any>, videoId: string): void {
+  private assertPlayability(playabilityStatusData: PlayabilityStatusData | undefined, videoId: string): void {
     const playabilityStatus = playabilityStatusData?.status;
-    
+
     if (playabilityStatus && playabilityStatus !== PLAYABILITY_STATUS.OK) {
-      const reason = playabilityStatusData.reason;
-      
+      const reason = playabilityStatusData?.reason;
+
       if (playabilityStatus === PLAYABILITY_STATUS.LOGIN_REQUIRED) {
         if (reason === PLAYABILITY_FAILED_REASON.BOT_DETECTED) {
           throw new RequestBlocked(videoId);
@@ -149,19 +192,19 @@ export class TranscriptListFetcher {
           throw new AgeRestricted(videoId);
         }
       }
-      
-      if (playabilityStatus === PLAYABILITY_STATUS.ERROR && 
+
+      if (playabilityStatus === PLAYABILITY_STATUS.ERROR &&
           reason === PLAYABILITY_FAILED_REASON.VIDEO_UNAVAILABLE) {
         if (videoId.startsWith('http://') || videoId.startsWith('https://')) {
           throw new InvalidVideoId(videoId);
         }
         throw new VideoUnavailable(videoId);
       }
-      
-      const subreasons = playabilityStatusData.errorScreen?.playerErrorMessageRenderer?.subreason?.runs || [];
-      const subreasonTexts = subreasons.map((run: any) => run.text || '').filter(Boolean);
-      
-      throw new VideoUnplayable(videoId, reason, subreasonTexts);
+
+      const subreasons = playabilityStatusData?.errorScreen?.playerErrorMessageRenderer?.subreason?.runs || [];
+      const subreasonTexts = subreasons.map((run) => run.text || '').filter(Boolean);
+
+      throw new VideoUnplayable(videoId, reason ?? null, subreasonTexts);
     }
   }
 
@@ -224,7 +267,7 @@ export class TranscriptListFetcher {
   /**
    * Fetch Innertube API data
    */
-  private async fetchInnertubeData(videoId: string, apiKey: string): Promise<Record<string, any>> {
+  private async fetchInnertubeData(videoId: string, apiKey: string): Promise<InnertubeResponse> {
     const url = INNERTUBE_API_URL.replace('{apiKey}', apiKey);
     try {
       const response = await this.httpClient.post(url, {
@@ -240,10 +283,10 @@ export class TranscriptListFetcher {
   /**
    * Build TranscriptList from captions JSON
    */
-  private buildTranscriptList(videoId: string, captionsJson: Record<string, any>, videoDetails?: VideoMetadata): TranscriptList {
-    const translationLanguages = (captionsJson.translationLanguages || []).map((tl: any) => 
+  private buildTranscriptList(videoId: string, captionsJson: CaptionsJson, videoDetails?: VideoMetadata): TranscriptList {
+    const translationLanguages = (captionsJson.translationLanguages || []).map((tl) =>
       new TranslationLanguage(
-        tl.languageName.runs[0].text,
+        tl.languageName.runs[0]?.text ?? '',
         tl.languageCode
       )
     );
@@ -251,7 +294,7 @@ export class TranscriptListFetcher {
     const manuallyCreatedTranscripts = new Map<string, Transcript>();
     const generatedTranscripts = new Map<string, Transcript>();
 
-    for (const caption of captionsJson.captionTracks) {
+    for (const caption of captionsJson.captionTracks || []) {
       const isGenerated = caption.kind === 'asr';
       const transcriptMap = isGenerated ? generatedTranscripts : manuallyCreatedTranscripts;
       
@@ -259,7 +302,7 @@ export class TranscriptListFetcher {
         this.httpClient,
         videoId,
         caption.baseUrl.replace('&fmt=srv3', ''),
-        caption.name.runs[0].text,
+        caption.name.runs[0]?.text ?? '',
         caption.languageCode,
         isGenerated,
         caption.isTranslatable ? translationLanguages : [],

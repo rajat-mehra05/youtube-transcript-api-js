@@ -142,9 +142,14 @@ youtube-transcript-api VIDEO_ID --list-transcripts
 | `--list-transcripts` | List available transcript languages | `--list-transcripts` |
 | `--languages <codes...>` | Language codes in priority order | `--languages de en` |
 | `--translate <code>` | Translate to specified language | `--translate es` |
-| `--format <format>` | Output format: `json`, `pretty`, `text`, `srt`, `webvtt` | `--format srt` |
+| `--format <format>` | Output format: `json`, `pretty`, `text`, `srt`, `webvtt`, `timestamped` | `--format srt` |
 | `--exclude-generated` | Exclude auto-generated transcripts | `--exclude-generated` |
 | `--exclude-manually-created` | Exclude manually created transcripts | `--exclude-manually-created` |
+| `--cookies <file>` | Cookie file (Netscape/JSON) for authentication | `--cookies cookies.txt` |
+| `--verbose` | Print debug information to stderr | `--verbose` |
+| `--save <file>` | Write output to a file instead of stdout | `--save output.txt` |
+| `--batch-file <file>` | Read video IDs from a file (one per line) | `--batch-file ids.txt` |
+| `--fail-fast` | Stop on the first error | `--fail-fast` |
 | `--http-proxy <url>` | Use HTTP proxy | `--http-proxy http://proxy:8080` |
 | `--https-proxy <url>` | Use HTTPS proxy | `--https-proxy http://proxy:8080` |
 | `--webshare-proxy-username <user>` | Webshare proxy username | `--webshare-proxy-username myuser` |
@@ -167,6 +172,12 @@ youtube-transcript-api dQw4w9WgXcQ --http-proxy http://user:pass@proxy.com:8080
 
 # Get only manually created transcripts in JSON
 youtube-transcript-api dQw4w9WgXcQ --exclude-generated --format json
+
+# Batch process videos from a file, save output, stop on error
+youtube-transcript-api --batch-file video-ids.txt --save output.json --fail-fast --verbose
+
+# Fetch age-restricted video with cookies
+youtube-transcript-api dQw4w9WgXcQ --cookies ~/cookies.txt
 ```
 
 ## Output Formatters
@@ -306,6 +317,40 @@ const api = new EnhancedYouTubeTranscriptApi(
 );
 
 const transcript = await api.fetch('VIDEO_ID');
+```
+
+## Cookie Authentication
+
+Authenticate requests using cookies for age-restricted or login-required videos. Export cookies from your browser using a "cookies.txt" extension.
+
+```typescript
+import { YouTubeTranscriptApi } from 'youtube-transcript-api-js';
+
+// Pass cookie file path as an option
+const api = new YouTubeTranscriptApi(undefined, undefined, {
+  cookiePath: '/path/to/cookies.txt'
+});
+
+const transcript = await api.fetch('AGE_RESTRICTED_VIDEO_ID');
+```
+
+Supports both Netscape/Mozilla format (`.txt`) and JSON format (`.json`). Only cookies for YouTube/Google domains are used.
+
+## Retry Configuration
+
+Requests are automatically retried with exponential backoff on transient errors (`RateLimitExceeded`, `NetworkError`, `TimeoutError`, `ConnectionError`, `RequestBlocked`).
+
+```typescript
+import { YouTubeTranscriptApi } from 'youtube-transcript-api-js';
+
+const api = new YouTubeTranscriptApi(undefined, undefined, {
+  retryConfig: {
+    maxRetries: 5,        // default: 3
+    baseDelayMs: 1000,    // default: 1000
+    maxDelayMs: 30000,    // default: 30000
+    jitterFactor: 0.5,    // default: 0.5 (0-1)
+  }
+});
 ```
 
 ## Error Handling

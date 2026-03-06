@@ -4,11 +4,14 @@ import { GenericProxyConfig } from '../proxies';
 import { InvalidVideoId, InvalidProxyUrl } from '../errors';
 import axios from 'axios';
 import { VALID_TRANSCRIPT_XML, TEST_VIDEO_ID } from './__fixtures__/youtube-responses';
+import { loadCookiesFromFile } from '../cookies';
 
 // Mock axios
 jest.mock('axios');
+jest.mock('../cookies');
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockedLoadCookies = loadCookiesFromFile as jest.MockedFunction<typeof loadCookiesFromFile>;
 
 // Mock HTML with correct INNERTUBE_API_KEY format
 const MOCK_VIDEO_HTML = `
@@ -115,6 +118,24 @@ describe('YouTubeTranscriptApi', () => {
       new YouTubeTranscriptApi(proxyConfig);
 
       expect(mockAxiosInstance.defaults.proxy).toBe(false);
+    });
+
+    it('should load cookies from file when cookiePath is provided', () => {
+      mockedLoadCookies.mockReturnValueOnce('YSC=abc; VISITOR_INFO=xyz');
+
+      new YouTubeTranscriptApi(undefined, undefined, { cookiePath: '/tmp/cookies.txt' });
+
+      expect(mockedLoadCookies).toHaveBeenCalledWith('/tmp/cookies.txt');
+      expect(mockAxiosInstance.defaults.headers.common['Cookie']).toBe('YSC=abc; VISITOR_INFO=xyz');
+    });
+
+    it('should append cookies to existing cookies when cookiePath is provided', () => {
+      mockAxiosInstance.defaults.headers.common['Cookie'] = 'EXISTING=old';
+      mockedLoadCookies.mockReturnValueOnce('YSC=abc');
+
+      new YouTubeTranscriptApi(undefined, mockAxiosInstance, { cookiePath: '/tmp/cookies.txt' });
+
+      expect(mockAxiosInstance.defaults.headers.common['Cookie']).toBe('EXISTING=old; YSC=abc');
     });
   });
 

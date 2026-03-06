@@ -401,6 +401,33 @@ describe('YouTubeTranscriptCli', () => {
       }
     });
 
+    it('should skip flag values when extracting video IDs from process.argv', async () => {
+      const mockTranscriptList = createMockTranscriptList('argvVideo');
+      const mockFetchedTranscript = createMockTranscript('argvVideo');
+
+      const mockTranscript = {
+        fetch: jest.fn().mockResolvedValue(mockFetchedTranscript),
+      };
+
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      const originalArgv = process.argv;
+      // Include a FLAGS_WITH_VALUES flag so the i++ skip path (line 146) is exercised
+      process.argv = ['node', 'cli.js', 'argvVideo', '--format', 'json'];
+
+      try {
+        const testCli = new YouTubeTranscriptCli();
+        await testCli.run(['--format', 'json']);
+
+        // Should extract 'argvVideo' but NOT 'json' (value of --format flag)
+        expect(mockApi.list).toHaveBeenCalledWith('argvVideo');
+        expect(mockApi.list).toHaveBeenCalledTimes(1);
+      } finally {
+        process.argv = originalArgv;
+      }
+    });
+
     it('should show help and exit when no video IDs provided anywhere', async () => {
       expect.assertions(1);
       // Set up process.argv with no video IDs (only flags)
@@ -480,6 +507,23 @@ describe('YouTubeTranscriptCli', () => {
       const stderrCalls = stderrSpy.mock.calls.map(c => c[0]);
       expect(stderrCalls.some(c => typeof c === 'string' && c.includes('[verbose]'))).toBe(true);
       expect(stderrCalls.some(c => typeof c === 'string' && c.includes('Fetching transcript for: test123'))).toBe(true);
+
+      stderrSpy.mockRestore();
+    });
+
+    it('should log proxy configuration when verbose and proxy are both set', async () => {
+      const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      const mockTranscriptList = createMockTranscriptList('test123');
+      const mockFetchedTranscript = createMockTranscript('test123');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['test123', '--verbose', '--http-proxy', 'http://proxy.example.com:8080']);
+
+      const stderrCalls = stderrSpy.mock.calls.map(c => c[0]);
+      expect(stderrCalls.some(c => typeof c === 'string' && c.includes('Using proxy:'))).toBe(true);
 
       stderrSpy.mockRestore();
     });
