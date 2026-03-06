@@ -97,20 +97,23 @@ describe('retry utilities', () => {
 
     it('should apply jitter within expected range', () => {
       const jitterConfig: RetryConfig = { ...config, jitterFactor: 0.5 };
-      const results = new Set<number>();
 
-      for (let i = 0; i < 100; i++) {
-        results.add(calculateDelay(0, jitterConfig));
-      }
+      // Mock Math.random to test deterministically
+      const mockRandom = jest.spyOn(Math, 'random');
 
-      // With jitterFactor=0.5, delay should be baseDelayMs +/- 50%
-      for (const delay of results) {
-        expect(delay).toBeGreaterThanOrEqual(500);
-        expect(delay).toBeLessThanOrEqual(1500);
-      }
+      // random=0 → jitter = -0.5, delay = 1000 * (1 - 0.5) = 500
+      mockRandom.mockReturnValue(0);
+      expect(calculateDelay(0, jitterConfig)).toBe(500);
 
-      // Should produce multiple distinct values (randomness)
-      expect(results.size).toBeGreaterThan(1);
+      // random=0.5 → jitter = 0, delay = 1000 * (1 + 0) = 1000
+      mockRandom.mockReturnValue(0.5);
+      expect(calculateDelay(0, jitterConfig)).toBe(1000);
+
+      // random=1 → jitter = 0.5, delay = 1000 * (1 + 0.5) = 1500
+      mockRandom.mockReturnValue(1);
+      expect(calculateDelay(0, jitterConfig)).toBe(1500);
+
+      mockRandom.mockRestore();
     });
   });
 
@@ -124,6 +127,10 @@ describe('retry utilities', () => {
   });
 
   describe('sleep', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     it('should resolve after the specified delay', async () => {
       jest.useFakeTimers();
       let resolved = false;
@@ -134,8 +141,6 @@ describe('retry utilities', () => {
       await jest.advanceTimersByTimeAsync(1000);
       await promise;
       expect(resolved).toBe(true);
-
-      jest.useRealTimers();
     });
   });
 });

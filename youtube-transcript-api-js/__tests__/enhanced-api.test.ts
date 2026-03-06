@@ -67,6 +67,8 @@ describe('EnhancedYouTubeTranscriptApi', () => {
       });
 
       expect(api).toBeInstanceOf(EnhancedYouTubeTranscriptApi);
+      // Should create base API without proxy config
+      expect(YouTubeTranscriptApi).toHaveBeenCalledWith();
     });
 
     it('should create instance with Invidious options enabled', () => {
@@ -93,6 +95,8 @@ describe('EnhancedYouTubeTranscriptApi', () => {
       );
 
       expect(api).toBeInstanceOf(EnhancedYouTubeTranscriptApi);
+      // Should create main + Invidious clients
+      expect(mockedAxios.create).toHaveBeenCalledTimes(2);
     });
 
     it('should throw error when Invidious enabled without instance URLs', () => {
@@ -121,10 +125,18 @@ describe('EnhancedYouTubeTranscriptApi', () => {
       );
 
       expect(api).toBeInstanceOf(EnhancedYouTubeTranscriptApi);
+      // Should create main + Invidious clients
+      expect(mockedAxios.create).toHaveBeenCalledTimes(2);
+      // Base API should receive proxy config
+      expect(YouTubeTranscriptApi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({ enabled: true }),
+        })
+      );
     });
 
     it('should use default timeout for Invidious when not specified', () => {
-      const api = new EnhancedYouTubeTranscriptApi(
+      new EnhancedYouTubeTranscriptApi(
         {},
         {
           enabled: true,
@@ -132,7 +144,11 @@ describe('EnhancedYouTubeTranscriptApi', () => {
         }
       );
 
-      expect(api).toBeInstanceOf(EnhancedYouTubeTranscriptApi);
+      // Invidious client should be created with default timeout (10000)
+      const invidiousCreateCall = mockedAxios.create.mock.calls[1]?.[0];
+      expect(invidiousCreateCall).toEqual(
+        expect.objectContaining({ timeout: 10000 })
+      );
     });
   });
 
@@ -194,13 +210,17 @@ describe('EnhancedYouTubeTranscriptApi', () => {
         }
       );
 
+      // Constructor creates 2 clients (main + Invidious)
+      expect(mockedAxios.create).toHaveBeenCalledTimes(2);
+      mockedAxios.create.mockClear();
+
       api.setInvidiousOptions({
         enabled: false,
         instanceUrls: '',
       });
 
-      // Invidious client should be set to null
-      expect(api).toBeInstanceOf(EnhancedYouTubeTranscriptApi);
+      // Disabling Invidious should NOT create a new axios instance
+      expect(mockedAxios.create).not.toHaveBeenCalled();
     });
 
     it('should update Invidious options', () => {
@@ -545,12 +565,16 @@ describe('EnhancedYouTubeTranscriptApi', () => {
       // Simulate browser environment
       (globalThis as any).window = {};
 
-      const api = new EnhancedYouTubeTranscriptApi({
+      new EnhancedYouTubeTranscriptApi({
         enabled: true,
         http: 'http://proxy.example.com:8080',
       });
 
-      expect(api).toBeInstanceOf(EnhancedYouTubeTranscriptApi);
+      // Should still create axios instance but without httpAgent/httpsAgent
+      expect(mockedAxios.create).toHaveBeenCalled();
+      const createConfig = mockedAxios.create.mock.calls[0]?.[0] as any;
+      expect(createConfig.httpAgent).toBeUndefined();
+      expect(createConfig.httpsAgent).toBeUndefined();
     });
 
     it('should use keep-alive agents when proxy is disabled in Node.js', () => {

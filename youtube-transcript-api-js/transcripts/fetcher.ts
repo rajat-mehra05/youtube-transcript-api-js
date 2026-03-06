@@ -17,36 +17,13 @@ import {
   ConnectionError
 } from '../errors';
 import { RetryConfig, DEFAULT_RETRY_CONFIG, isRetryableError, calculateDelay, sleep } from '../retry';
-
-/**
- * Constants for YouTube API
- */
-const WATCH_URL = 'https://www.youtube.com/watch?v={videoId}';
-const INNERTUBE_API_URL = 'https://www.youtube.com/youtubei/v1/player?key={apiKey}';
-const INNERTUBE_CONTEXT = {
-  client: {
-    clientName: 'ANDROID',
-    clientVersion: '20.10.38'
-  }
-};
-
-/**
- * Playability status constants
- */
-const PLAYABILITY_STATUS = {
-  OK: 'OK',
-  ERROR: 'ERROR',
-  LOGIN_REQUIRED: 'LOGIN_REQUIRED'
-} as const;
-
-/**
- * Playability failed reason constants
- */
-const PLAYABILITY_FAILED_REASON = {
-  BOT_DETECTED: "Sign in to confirm you're not a bot",
-  AGE_RESTRICTED: 'This video may be inappropriate for some users.',
-  VIDEO_UNAVAILABLE: 'This video is unavailable'
-} as const;
+import {
+  WATCH_URL,
+  INNERTUBE_API_URL,
+  INNERTUBE_CONTEXT,
+  PLAYABILITY_STATUS,
+  PLAYABILITY_FAILED_REASON
+} from './constants';
 
 /**
  * Parses the Retry-After header value which can be either seconds or an HTTP-date

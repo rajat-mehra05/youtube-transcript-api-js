@@ -365,12 +365,19 @@ describe('Formatters', () => {
     it('should include supported types in error message', () => {
       const loader = new FormatterLoader();
 
-      expect(() => loader.load('invalid')).toThrow('json');
-      expect(() => loader.load('invalid')).toThrow('pretty');
-      expect(() => loader.load('invalid')).toThrow('text');
-      expect(() => loader.load('invalid')).toThrow('webvtt');
-      expect(() => loader.load('invalid')).toThrow('srt');
-      expect(() => loader.load('invalid')).toThrow('timestamped');
+      let errorMessage = '';
+      try {
+        loader.load('invalid');
+      } catch (e: any) {
+        errorMessage = e.message;
+      }
+
+      expect(errorMessage).toContain('json');
+      expect(errorMessage).toContain('pretty');
+      expect(errorMessage).toContain('text');
+      expect(errorMessage).toContain('webvtt');
+      expect(errorMessage).toContain('srt');
+      expect(errorMessage).toContain('timestamped');
     });
 
     it('should default to pretty formatter', () => {

@@ -46,7 +46,7 @@ describe('Error Classes', () => {
     });
   });
 
-  describe('CouldNotRetrieveTranscript', () => {
+  describe('YouTubeDataUnparsable (CouldNotRetrieveTranscript base)', () => {
     it('should store videoId', () => {
       const error = new YouTubeDataUnparsable(TEST_VIDEO_ID);
       expect(error.videoId).toBe(TEST_VIDEO_ID);

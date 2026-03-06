@@ -314,10 +314,11 @@ describe('YouTubeTranscriptApi', () => {
       it('should fetch transcript for valid video ID', async () => {
         const result = await api.fetch(TEST_VIDEO_ID);
 
-        expect(result).toBeDefined();
-        expect(result.snippets).toBeDefined();
-        expect(Array.isArray(result.snippets)).toBe(true);
-        expect(result.snippets.length).toBeGreaterThan(0);
+        expect(result.videoId).toBe(TEST_VIDEO_ID);
+        expect(result.snippets).toHaveLength(3);
+        expect(result.snippets[0]!.text).toBe('Hello world');
+        expect(result.snippets[0]!.start).toBe(0);
+        expect(result.snippets[0]!.duration).toBe(2.5);
       });
 
       it('should use default language (en) when not specified', async () => {
@@ -399,10 +400,11 @@ describe('YouTubeTranscriptApi', () => {
           status: 200,
         });
 
-        // This should not throw - just verifying the parameter is accepted
         const result = await api.fetch(TEST_VIDEO_ID, ['en'], true);
 
-        expect(result).toBeDefined();
+        expect(result.videoId).toBe(TEST_VIDEO_ID);
+        expect(result.snippets).toHaveLength(3);
+        expect(result.languageCode).toBe('en');
       });
     });
   });

@@ -507,6 +507,10 @@ describe('Models', () => {
         await expect(transcript.fetch()).rejects.toThrow(PoTokenRequired);
       });
 
+      // NOTE: The wrapNetworkError tests below overlap with fetcher.test.ts because
+      // models.ts and fetcher.ts contain duplicate wrapNetworkError implementations.
+      // Consider extracting the shared function into a common module.
+
       it('should throw RateLimitExceeded on 429 response', async () => {
         const axiosError = new AxiosError('Rate limited', 'ERR_BAD_REQUEST');
         (axiosError as any).response = {
@@ -928,9 +932,9 @@ describe('Models', () => {
       });
 
       it('should include requested language codes in error', () => {
+        expect.assertions(2);
         try {
           transcriptList.findTranscript(['fr', 'it']);
-          fail('Expected NoTranscriptFound to be thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(NoTranscriptFound);
           expect((error as NoTranscriptFound).requestedLanguageCodes).toEqual(['fr', 'it']);

@@ -183,6 +183,7 @@ describe('YouTubeTranscriptCli', () => {
     });
 
     it('should error when both exclude flags are used together', async () => {
+      expect.assertions(2);
       try {
         await cli.run(['test123', '--exclude-manually-created', '--exclude-generated']);
       } catch (e: any) {
@@ -381,21 +382,24 @@ describe('YouTubeTranscriptCli', () => {
       const originalArgv = process.argv;
       process.argv = ['node', 'cli.js', 'argvVideo'];
 
-      // Create new CLI instance and run with empty array to trigger fallback to process.argv
-      const testCli = new YouTubeTranscriptCli();
+      try {
+        // Create new CLI instance and run with empty array to trigger fallback to process.argv
+        const testCli = new YouTubeTranscriptCli();
 
-      // We need to trigger the else branch by passing something that isn't a valid video ID array
-      // The condition checks: Array.isArray(videoIds) && videoIds.length > 0 && typeof videoIds[0] === 'string' && !videoIds[0].startsWith('--')
-      // Passing an array starting with '--' should trigger the else branch
-      await testCli.run(['--format', 'json']);
+        // We need to trigger the else branch by passing something that isn't a valid video ID array
+        // The condition checks: Array.isArray(videoIds) && videoIds.length > 0 && typeof videoIds[0] === 'string' && !videoIds[0].startsWith('--')
+        // Passing an array starting with '--' should trigger the else branch
+        await testCli.run(['--format', 'json']);
 
-      process.argv = originalArgv;
-
-      // Should have extracted 'argvVideo' from process.argv
-      expect(mockApi.list).toHaveBeenCalledWith('argvVideo');
+        // Should have extracted 'argvVideo' from process.argv
+        expect(mockApi.list).toHaveBeenCalledWith('argvVideo');
+      } finally {
+        process.argv = originalArgv;
+      }
     });
 
     it('should show help and exit when no video IDs provided anywhere', async () => {
+      expect.assertions(1);
       // Set up process.argv with no video IDs (only flags)
       const originalArgv = process.argv;
       process.argv = ['node', 'cli.js'];
@@ -403,17 +407,16 @@ describe('YouTubeTranscriptCli', () => {
       // Mock stdout to capture help output
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation();
 
-      const testCli = new YouTubeTranscriptCli();
-
       try {
+        const testCli = new YouTubeTranscriptCli();
         await testCli.run([]);
       } catch (e: any) {
         // process.exit is called by Commander help - could be 0 or undefined
         expect(processExitSpy).toHaveBeenCalled();
+      } finally {
+        process.argv = originalArgv;
+        stdoutSpy.mockRestore();
       }
-
-      process.argv = originalArgv;
-      stdoutSpy.mockRestore();
     });
 
     it('should handle when videoIds starts with option flag', async () => {
@@ -430,13 +433,15 @@ describe('YouTubeTranscriptCli', () => {
       const originalArgv = process.argv;
       process.argv = ['node', 'cli.js', 'fallbackVideo', '--list-transcripts'];
 
-      const testCli = new YouTubeTranscriptCli();
-      // Pass array starting with '--' to trigger process.argv fallback
-      await testCli.run(['--list-transcripts']);
+      try {
+        const testCli = new YouTubeTranscriptCli();
+        // Pass array starting with '--' to trigger process.argv fallback
+        await testCli.run(['--list-transcripts']);
 
-      process.argv = originalArgv;
-
-      expect(mockApi.list).toHaveBeenCalledWith('fallbackVideo');
+        expect(mockApi.list).toHaveBeenCalledWith('fallbackVideo');
+      } finally {
+        process.argv = originalArgv;
+      }
     });
 
   });
@@ -552,6 +557,7 @@ describe('YouTubeTranscriptCli', () => {
     });
 
     it('should error if batch file does not exist', async () => {
+      expect.assertions(2);
       mockFs.existsSync.mockReturnValue(false);
 
       try {
@@ -566,6 +572,7 @@ describe('YouTubeTranscriptCli', () => {
 
   describe('--fail-fast flag', () => {
     it('should stop on first error and exit non-zero when --fail-fast is set', async () => {
+      expect.assertions(3);
       mockApi.list
         .mockRejectedValueOnce(new Error('Failed for video1'))
         .mockResolvedValueOnce(createMockTranscriptList('video2'));
@@ -631,6 +638,7 @@ describe('main function', () => {
   });
 
   it('should handle Error objects and exit with code 1', async () => {
+    expect.assertions(3);
     process.argv = ['node', 'cli.js', 'test123'];
 
     // Mock YouTubeTranscriptCli to throw when run() is called
@@ -648,6 +656,7 @@ describe('main function', () => {
   });
 
   it('should handle non-Error objects and exit with code 1', async () => {
+    expect.assertions(3);
     process.argv = ['node', 'cli.js', 'test123'];
 
     // Mock YouTubeTranscriptCli to throw a non-Error object when run() is called

@@ -154,11 +154,11 @@ describe('TranscriptParser', () => {
       });
 
       it('should include original error in TranscriptParseError', async () => {
+        expect.assertions(2);
         const parser = new TranscriptParser();
 
         try {
           await parser.parse(MALFORMED_XML);
-          fail('Expected TranscriptParseError to be thrown');
         } catch (error) {
           expect(error).toBeInstanceOf(TranscriptParseError);
           expect((error as TranscriptParseError).message).toContain('Failed to parse');
