@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, CreateAxiosDefaults } from 'axios';
 import http from 'node:http';
 import https from 'node:https';
 import { HttpProxyAgent } from 'http-proxy-agent';
@@ -7,6 +7,12 @@ import { YouTubeTranscriptApi } from '../api';
 import { ProxyOptions, InvidiousOptions, EnhancedProxyConfig } from '../proxies';
 import { YouTubeTranscriptApiException } from '../errors';
 import { FormatterLoader } from '../formatters';
+import { FetchedTranscript } from '../transcripts/models';
+
+/** Check if running in a Node.js (non-browser) environment */
+function isNodeEnvironment(): boolean {
+  return typeof (globalThis as { window?: unknown }).window === 'undefined';
+}
 
 /**
  * Normalized video metadata returned by getVideoMetadata()
@@ -30,6 +36,8 @@ const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/
 export class EnhancedYouTubeTranscriptApi {
   private httpClient!: AxiosInstance;
   private invidiousClient: AxiosInstance | null = null;
+  private invidiousInstanceUrls: string[] = [];
+  private invidiousCurrentInstanceIndex: number = 0;
   private baseApi: YouTubeTranscriptApi;
   private proxyOptions: ProxyOptions;
   private invidiousOptions: InvidiousOptions;
@@ -81,7 +89,7 @@ export class EnhancedYouTubeTranscriptApi {
    * Initialize HTTP client with enhanced proxy support
    */
   private initializeHttpClient(): void {
-    const config: any = {
+    const config: CreateAxiosDefaults = {
       headers: {
         'Accept-Language': 'en-US',
         'User-Agent': USER_AGENT,
@@ -94,15 +102,15 @@ export class EnhancedYouTubeTranscriptApi {
     // Add proxy configuration if enabled
     if (this.proxyOptions.enabled) {
       config.proxy = false; // Disable built-in proxy resolver
-      
+
       // Only use proxy agents in Node.js environments
-      if (typeof (globalThis as any).window === 'undefined') {
+      if (isNodeEnvironment()) {
         config.httpAgent = new HttpProxyAgent(this.proxyOptions.http || '');
         config.httpsAgent = new HttpsProxyAgent(
           this.proxyOptions.https || this.proxyOptions.http || ''
         );
       }
-    } else if (typeof (globalThis as any).window === 'undefined') {
+    } else if (isNodeEnvironment()) {
       // Use keep-alive agents when not using proxy
       config.httpAgent = new http.Agent({ keepAlive: true });
       config.httpsAgent = new https.Agent({ keepAlive: true });
@@ -123,9 +131,9 @@ export class EnhancedYouTubeTranscriptApi {
       throw new Error('At least one Invidious instance URL must be provided when Invidious is enabled');
     }
 
-    const primaryInstanceUrl = instanceUrls[0];
+    const primaryInstanceUrl = instanceUrls[0]!;
 
-    const config: any = {
+    const config: CreateAxiosDefaults = {
       baseURL: primaryInstanceUrl,
       timeout: this.invidiousOptions.timeout || 10000,
       headers: {
@@ -135,7 +143,7 @@ export class EnhancedYouTubeTranscriptApi {
     };
 
     // Add proxy configuration if enabled
-    if (this.proxyOptions.enabled && typeof (globalThis as any).window === 'undefined') {
+    if (this.proxyOptions.enabled && isNodeEnvironment()) {
       config.proxy = false;
       config.httpAgent = new HttpProxyAgent(this.proxyOptions.http || '');
       config.httpsAgent = new HttpsProxyAgent(
@@ -144,10 +152,10 @@ export class EnhancedYouTubeTranscriptApi {
     }
 
     this.invidiousClient = axios.create(config);
-    
+
     // Store instance URLs for fallback
-    (this.invidiousClient as any).__instanceUrls = instanceUrls;
-    (this.invidiousClient as any).__currentInstanceIndex = 0;
+    this.invidiousInstanceUrls = instanceUrls;
+    this.invidiousCurrentInstanceIndex = 0;
   }
 
   /**
@@ -184,7 +192,7 @@ export class EnhancedYouTubeTranscriptApi {
     languages: string[] = ['en'],
     preserveFormatting: boolean = false,
     formatter?: string
-  ): Promise<any> {
+  ): Promise<FetchedTranscript | string> {
     const transcript = await this.baseApi.fetch(videoId, languages, preserveFormatting);
 
     if (formatter) {

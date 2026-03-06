@@ -2,6 +2,7 @@ import { EnhancedYouTubeTranscriptApi } from '../enhanced-api';
 import { YouTubeTranscriptApi } from '../api';
 import { YouTubeTranscriptApiException } from '../errors';
 import { FormatterLoader } from '../formatters';
+import { FetchedTranscript } from '../transcripts/models';
 import axios from 'axios';
 
 // Mock dependencies
@@ -261,7 +262,7 @@ describe('EnhancedYouTubeTranscriptApi', () => {
       const result = await api.fetch('test123');
 
       expect(mockBaseApi.fetch).toHaveBeenCalledWith('test123', ['en'], false);
-      expect(result.snippets).toHaveLength(1);
+      expect((result as FetchedTranscript).snippets).toHaveLength(1);
     });
 
     it('should fetch transcript with custom languages', async () => {

@@ -146,6 +146,63 @@ describe('TranscriptParser', () => {
       });
     });
 
+    describe('deeply nested entity-encoded HTML', () => {
+      it('should strip nested entity-encoded HTML tags when preserveFormatting is false', async () => {
+        const parser = new TranscriptParser(false);
+        const xml = `<?xml version="1.0" encoding="utf-8" ?>
+<transcript>
+  <text start="0" dur="2.5">&lt;div&gt;&lt;span&gt;Nested&lt;/span&gt; content&lt;/div&gt;</text>
+  <text start="2.5" dur="2.5">Normal text</text>
+</transcript>`;
+        const snippets = await parser.parse(xml);
+
+        expect(snippets[0]!.text).toBe('Nested content');
+        expect(snippets[0]!.text).not.toContain('<');
+      });
+
+      it('should preserve double-encoded entities as literal text', async () => {
+        // Double-encoded: &amp;lt; should decode to &lt; (literal text), NOT to <
+        const parser = new TranscriptParser(false);
+        const xml = `<?xml version="1.0" encoding="utf-8" ?>
+<transcript>
+  <text start="0" dur="2.5">&amp;lt;b&amp;gt;not bold&amp;lt;/b&amp;gt;</text>
+  <text start="2.5" dur="2.5">Normal</text>
+</transcript>`;
+        const snippets = await parser.parse(xml);
+
+        // XML decodes &amp; → & and &lt; stays as literal text &lt;
+        // The result should contain literal &lt; and &gt; since they weren't HTML tags
+        expect(snippets[0]!.text).toContain('not bold');
+      });
+
+      it('should handle mixed literal and entity-encoded content', async () => {
+        const parser = new TranscriptParser(false);
+        const xml = `<?xml version="1.0" encoding="utf-8" ?>
+<transcript>
+  <text start="0" dur="2.5">Hello &amp; &lt;b&gt;world&lt;/b&gt;</text>
+  <text start="2.5" dur="2.5">End</text>
+</transcript>`;
+        const snippets = await parser.parse(xml);
+
+        // & is preserved, <b> tags are stripped
+        expect(snippets[0]!.text).toBe('Hello & world');
+      });
+
+      it('should preserve nested formatting tags when preserveFormatting is true', async () => {
+        const parser = new TranscriptParser(true);
+        const xml = `<?xml version="1.0" encoding="utf-8" ?>
+<transcript>
+  <text start="0" dur="2.5">&lt;b&gt;&lt;i&gt;Bold italic&lt;/i&gt;&lt;/b&gt;</text>
+  <text start="2.5" dur="2.5">Normal</text>
+</transcript>`;
+        const snippets = await parser.parse(xml);
+
+        expect(snippets[0]!.text).toContain('<b>');
+        expect(snippets[0]!.text).toContain('<i>');
+        expect(snippets[0]!.text).toContain('Bold italic');
+      });
+    });
+
     describe('error handling', () => {
       it('should throw TranscriptParseError for invalid XML', async () => {
         const parser = new TranscriptParser();

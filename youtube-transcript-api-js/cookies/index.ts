@@ -83,7 +83,7 @@ export function parseJsonCookies(content: string): ParsedCookie[] {
 
   return parsed
     .filter((c): c is Record<string, unknown> =>
-      c != null && typeof c === 'object' && typeof (c as any).name === 'string' && typeof (c as any).value === 'string'
+      c != null && typeof c === 'object' && typeof (c as Record<string, unknown>).name === 'string' && typeof (c as Record<string, unknown>).value === 'string'
     )
     .map((c) => ({
       name: c.name as string,
@@ -115,8 +115,8 @@ export function loadCookiesFromFile(cookiePath: string): string {
   let content: string;
   try {
     content = fs.readFileSync(cookiePath, 'utf-8');
-  } catch (err: any) {
-    if (err.code === 'ENOENT') {
+  } catch (err: unknown) {
+    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
       throw new CookiePathInvalid(cookiePath);
     }
     throw err;

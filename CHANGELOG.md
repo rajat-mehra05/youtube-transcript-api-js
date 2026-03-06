@@ -4,7 +4,7 @@
 
 ### Changed
 - Replaced `xml2js` with `fast-xml-parser` — ~2.8MB smaller install, faster parsing, built-in TypeScript types
-- Tightened `any` types across codebase (`ProxyConfig`, `AxiosInstance`, `FormatterOptions`, `CliOptions`, `FetchedTranscriptSnippet`)
+- Eliminated all `any` types from production source code. Notable: `EnhancedYouTubeTranscriptApi.fetch()` return type narrowed from `Promise<any>` to `Promise<FetchedTranscript | string>`, and `TranscriptListFetcher` internals now use typed interfaces for YouTube Innertube API responses
 - `CouldNotRetrieveTranscript.message` now returns the full error message (previously empty; only `toString()` worked)
 - `TranscriptParser.parse()` now throws `TranscriptParseError` for non-transcript input instead of silently returning `[]`
 - Retry logic now uses exponential backoff with jitter instead of immediate recursive retry. Configurable via `RetryConfig`. Set `baseDelayMs: 0` to restore previous behavior

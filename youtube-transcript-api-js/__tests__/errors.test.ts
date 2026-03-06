@@ -205,6 +205,15 @@ describe('Error Classes', () => {
       expect(result).toBe(error); // Returns self for chaining
     });
 
+    it('should still include cause message after withProxyConfig is called', () => {
+      const error = new RequestBlocked(TEST_VIDEO_ID);
+      error.withProxyConfig({ http: 'http://proxy.example.com' });
+      const message = error.toString();
+
+      expect(message).toContain('YouTube is blocking requests');
+      expect(message).toContain('proxies');
+    });
+
     it('should be an instance of CouldNotRetrieveTranscript', () => {
       const error = new RequestBlocked(TEST_VIDEO_ID);
       expect(error).toBeInstanceOf(CouldNotRetrieveTranscript);
