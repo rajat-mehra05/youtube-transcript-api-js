@@ -12,6 +12,7 @@ module.exports = {
     '!youtube-transcript-api-js/**/*.d.ts',
     '!youtube-transcript-api-js/**/*.test.ts',
     '!youtube-transcript-api-js/**/*.spec.ts',
+    '!youtube-transcript-api-js/index.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],

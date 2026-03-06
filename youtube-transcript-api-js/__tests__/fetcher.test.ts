@@ -375,12 +375,12 @@ describe('TranscriptListFetcher', () => {
 
   describe('error handling - video unplayable', () => {
     it('should throw VideoUnplayable with reason and subreasons', async () => {
+      expect.assertions(4);
       mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
       mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_UNPLAYABLE });
 
       try {
         await fetcher.fetch(TEST_VIDEO_ID);
-        fail('Expected VideoUnplayable to be thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(VideoUnplayable);
         const unplayable = error as VideoUnplayable;
