@@ -372,12 +372,9 @@ describe('Formatters', () => {
         errorMessage = e.message;
       }
 
-      expect(errorMessage).toContain('json');
-      expect(errorMessage).toContain('pretty');
-      expect(errorMessage).toContain('text');
-      expect(errorMessage).toContain('webvtt');
-      expect(errorMessage).toContain('srt');
-      expect(errorMessage).toContain('timestamped');
+      for (const type of FormatterLoader.getSupportedTypes()) {
+        expect(errorMessage).toContain(type);
+      }
     });
 
     it('should default to pretty formatter', () => {

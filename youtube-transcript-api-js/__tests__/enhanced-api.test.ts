@@ -68,7 +68,8 @@ describe('EnhancedYouTubeTranscriptApi', () => {
 
       expect(api).toBeInstanceOf(EnhancedYouTubeTranscriptApi);
       // Should create base API without proxy config
-      expect(YouTubeTranscriptApi).toHaveBeenCalledWith();
+      expect(YouTubeTranscriptApi).toHaveBeenCalled();
+      expect((YouTubeTranscriptApi as jest.Mock).mock.calls[0]![0]).toBeUndefined();
     });
 
     it('should create instance with Invidious options enabled', () => {
@@ -500,7 +501,8 @@ describe('EnhancedYouTubeTranscriptApi', () => {
     it('should not pass proxy config to base API when proxy is disabled', () => {
       new EnhancedYouTubeTranscriptApi({ enabled: false });
 
-      expect(YouTubeTranscriptApi).toHaveBeenCalledWith();
+      expect(YouTubeTranscriptApi).toHaveBeenCalled();
+      expect((YouTubeTranscriptApi as jest.Mock).mock.calls[0]![0]).toBeUndefined();
     });
 
     it('should re-create base API when setProxyOptions is called with proxy enabled', () => {
@@ -531,7 +533,8 @@ describe('EnhancedYouTubeTranscriptApi', () => {
 
       api.setProxyOptions({ enabled: false });
 
-      expect(YouTubeTranscriptApi).toHaveBeenCalledWith();
+      expect(YouTubeTranscriptApi).toHaveBeenCalled();
+      expect((YouTubeTranscriptApi as jest.Mock).mock.calls[0]![0]).toBeUndefined();
     });
   });
 

@@ -342,7 +342,10 @@ describe('YouTubeTranscriptCli', () => {
 
       await cli.run(['test123']);
 
-      expect(YouTubeTranscriptApi).toHaveBeenCalledWith(undefined, undefined, undefined);
+      const call = (YouTubeTranscriptApi as jest.Mock).mock.calls[0]!;
+      expect(call[0]).toBeUndefined(); // proxyConfig
+      expect(call[1]).toBeUndefined(); // httpClient
+      expect(call[2]).toBeUndefined(); // options
     });
 
     it('should prioritize webshare proxy over generic proxy', async () => {

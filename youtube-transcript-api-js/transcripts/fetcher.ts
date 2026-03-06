@@ -1,4 +1,4 @@
-import { AxiosInstance, AxiosError } from 'axios';
+import { AxiosInstance } from 'axios';
 import { TranscriptList, Transcript, TranslationLanguage, VideoMetadata } from './models';
 import { ProxyConfig } from '../proxies';
 import {
@@ -11,10 +11,7 @@ import {
   AgeRestricted,
   TranscriptsDisabled,
   FailedToCreateConsentCookie,
-  RateLimitExceeded,
-  NetworkError,
-  TimeoutError,
-  ConnectionError
+  RateLimitExceeded
 } from '../errors';
 import { RetryConfig, DEFAULT_RETRY_CONFIG, isRetryableError, calculateDelay, sleep } from '../retry';
 import {
@@ -24,68 +21,7 @@ import {
   PLAYABILITY_STATUS,
   PLAYABILITY_FAILED_REASON
 } from './constants';
-
-/**
- * Parses the Retry-After header value which can be either seconds or an HTTP-date
- */
-function parseRetryAfter(retryAfter: string | undefined): number | undefined {
-  if (!retryAfter) {
-    return undefined;
-  }
-
-  // First, try parsing as an integer (seconds)
-  const seconds = parseInt(retryAfter, 10);
-  if (!isNaN(seconds)) {
-    return seconds;
-  }
-
-  // Try parsing as an HTTP-date
-  const dateMs = Date.parse(retryAfter);
-  if (!isNaN(dateMs)) {
-    const secondsUntil = Math.ceil((dateMs - Date.now()) / 1000);
-    return secondsUntil > 0 ? secondsUntil : undefined;
-  }
-
-  return undefined;
-}
-
-/**
- * Wraps axios errors with contextual error classes
- */
-function wrapNetworkError(error: unknown, url: string, videoId: string): never {
-  if (error instanceof AxiosError) {
-    // Handle HTTP status codes
-    if (error.response) {
-      const status = error.response.status;
-
-      if (status === 429) {
-        const retryAfter = error.response.headers['retry-after'];
-        const retryAfterSeconds = parseRetryAfter(retryAfter);
-        throw new RateLimitExceeded(videoId, retryAfterSeconds);
-      }
-    }
-
-    // Handle network-level errors
-    if (error.code) {
-      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-        const timeout = error.config?.timeout || 0;
-        throw new TimeoutError(url, timeout);
-      }
-
-      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.code === 'ENETUNREACH') {
-        throw new ConnectionError(url, error.code);
-      }
-
-      throw new NetworkError(`Request to ${url} failed: ${error.message}`, error.code);
-    }
-
-    // Generic axios error
-    throw new NetworkError(`Request to ${url} failed: ${error.message}`);
-  }
-
-  // Re-throw non-axios errors
-  throw error;
-}
+import { wrapNetworkError } from './network-errors';
 
 /**
  * Handles fetching transcript lists from YouTube
@@ -102,12 +38,26 @@ export class TranscriptListFetcher {
     const rawMaxRetries = retryConfig?.maxRetries
       ?? (proxyConfig?.retriesWhenBlocked ?? DEFAULT_RETRY_CONFIG.maxRetries);
 
-    // Clamp to a non-negative integer; fall back to default if invalid (NaN/Infinity/negative)
-    const effectiveMaxRetries = Number.isFinite(rawMaxRetries) && rawMaxRetries >= 0
-      ? Math.floor(rawMaxRetries)
-      : DEFAULT_RETRY_CONFIG.maxRetries;
+    // Sanitize all numeric fields: finite + non-negative, fall back to defaults if invalid
+    const clampNonNeg = (val: number | undefined, fallback: number) =>
+      val !== undefined && Number.isFinite(val) && val >= 0 ? val : fallback;
 
-    this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig, maxRetries: effectiveMaxRetries };
+    const effectiveMaxRetries = clampNonNeg(rawMaxRetries, DEFAULT_RETRY_CONFIG.maxRetries);
+    const baseDelayMs = clampNonNeg(retryConfig?.baseDelayMs, DEFAULT_RETRY_CONFIG.baseDelayMs);
+    const maxDelayMs = clampNonNeg(retryConfig?.maxDelayMs, DEFAULT_RETRY_CONFIG.maxDelayMs);
+    const effectiveBaseDelay = Math.min(baseDelayMs, maxDelayMs);
+    const jitterFactor = retryConfig?.jitterFactor !== undefined
+      && Number.isFinite(retryConfig.jitterFactor)
+      && retryConfig.jitterFactor >= 0 && retryConfig.jitterFactor <= 1
+      ? retryConfig.jitterFactor
+      : DEFAULT_RETRY_CONFIG.jitterFactor;
+
+    this.retryConfig = {
+      maxRetries: Math.floor(effectiveMaxRetries),
+      baseDelayMs: effectiveBaseDelay,
+      maxDelayMs,
+      jitterFactor,
+    };
   }
 
   /**
@@ -224,12 +174,20 @@ export class TranscriptListFetcher {
       throw new FailedToCreateConsentCookie(videoId);
     }
     
-    // Append consent cookie (preserve existing cookies e.g. user-supplied auth cookies)
+    // Replace any existing CONSENT cookie, preserve other cookies
     const consentCookie = `CONSENT=YES+${match[1]}`;
     const existing = this.httpClient.defaults.headers.common['Cookie'];
-    this.httpClient.defaults.headers.common['Cookie'] = existing
-      ? `${existing}; ${consentCookie}`
-      : consentCookie;
+    if (existing) {
+      const filtered = String(existing)
+        .split(/;\s*/)
+        .filter(token => !token.startsWith('CONSENT='))
+        .join('; ');
+      this.httpClient.defaults.headers.common['Cookie'] = filtered
+        ? `${filtered}; ${consentCookie}`
+        : consentCookie;
+    } else {
+      this.httpClient.defaults.headers.common['Cookie'] = consentCookie;
+    }
   }
 
   /**
