@@ -286,7 +286,7 @@ export class TranscriptListFetcher {
   private buildTranscriptList(videoId: string, captionsJson: CaptionsJson, videoDetails?: VideoMetadata): TranscriptList {
     const translationLanguages = (captionsJson.translationLanguages || []).map((tl) =>
       new TranslationLanguage(
-        tl.languageName.runs[0]!.text,
+        tl.languageName.runs[0]?.text ?? '',
         tl.languageCode
       )
     );
@@ -302,7 +302,7 @@ export class TranscriptListFetcher {
         this.httpClient,
         videoId,
         caption.baseUrl.replace('&fmt=srv3', ''),
-        caption.name.runs[0]!.text,
+        caption.name.runs[0]?.text ?? '',
         caption.languageCode,
         isGenerated,
         caption.isTranslatable ? translationLanguages : [],

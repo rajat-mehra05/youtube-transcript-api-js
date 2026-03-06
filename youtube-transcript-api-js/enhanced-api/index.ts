@@ -36,8 +36,6 @@ const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/
 export class EnhancedYouTubeTranscriptApi {
   private httpClient!: AxiosInstance;
   private invidiousClient: AxiosInstance | null = null;
-  private invidiousInstanceUrls: string[] = [];
-  private invidiousCurrentInstanceIndex: number = 0;
   private baseApi: YouTubeTranscriptApi;
   private proxyOptions: ProxyOptions;
   private invidiousOptions: InvidiousOptions;
@@ -152,10 +150,6 @@ export class EnhancedYouTubeTranscriptApi {
     }
 
     this.invidiousClient = axios.create(config);
-
-    // Store instance URLs for fallback
-    this.invidiousInstanceUrls = instanceUrls;
-    this.invidiousCurrentInstanceIndex = 0;
   }
 
   /**
