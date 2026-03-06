@@ -1,8 +1,33 @@
 # youtube-transcript-api-js
 
+## 3.0.0
+
+### Major Changes
+
+- ### Breaking Changes
+  - **`TranscriptParser.parse()` now throws `TranscriptParseError`** for non-transcript input instead of silently returning `[]`
+  - **`CouldNotRetrieveTranscript.message`** now returns the full error message (previously empty; only `toString()` worked)
+  - **Replaced `xml2js` with `fast-xml-parser`** — removes `xml2js` and `@types/xml2js` dependencies
+  - **Retry logic uses exponential backoff with jitter** instead of immediate recursive retry. Set `baseDelayMs: 0` to restore previous behavior
+  - **`EnhancedYouTubeTranscriptApi.fetch()` return type** narrowed from `Promise<any>` to `Promise<FetchedTranscript | string>`
+
+  ### Added
+  - **Cookie authentication**: Load cookies from Netscape `.txt` or JSON files for age-restricted videos via `cookiePath` option or `--cookies` CLI flag
+  - **Retry with exponential backoff**: Configurable `RetryConfig` with `maxRetries`, `baseDelayMs`, `maxDelayMs`, `jitterFactor`
+  - **`YouTubeTranscriptApiOptions`**: Options object as 3rd constructor parameter (`retryConfig`, `cookiePath`)
+  - CLI flags: `--cookies`, `--verbose`, `--save`, `--batch-file`, `--fail-fast`
+  - Exported missing types: `InvalidProxyUrl`, `TranscriptParseError`, `RateLimitExceeded`, `NetworkError`, `TimeoutError`, `ConnectionError`, `RetryConfig`, `DEFAULT_RETRY_CONFIG`, `loadCookiesFromFile`, `ParsedCookie`, `FormatterOptions`, `CliOptions`
+
+  ### Fixed
+  - Removed stray `console.log` debug output from CLI
+  - CLI `process.argv` fallback no longer captures option values as video IDs
+  - Consent cookie handling now appends to existing cookies instead of overwriting
+  - `AgeRestricted` error message now includes cookie auth instructions
+
 ## [Unreleased]
 
 ### Changed
+
 - Replaced `xml2js` with `fast-xml-parser` — ~2.8MB smaller install, faster parsing, built-in TypeScript types
 - Eliminated all `any` types from production source code. Notable: `EnhancedYouTubeTranscriptApi.fetch()` return type narrowed from `Promise<any>` to `Promise<FetchedTranscript | string>`, and `TranscriptListFetcher` internals now use typed interfaces for YouTube Innertube API responses
 - `CouldNotRetrieveTranscript.message` now returns the full error message (previously empty; only `toString()` worked)
@@ -12,10 +37,12 @@
 - Consent cookie handling now appends to existing cookies instead of overwriting them
 
 ### Fixed
+
 - Removed stray `console.log` debug output from CLI `fetchTranscript` path
 - CLI `process.argv` fallback no longer captures option values (e.g. `--format json`) as video IDs
 
 ### Added
+
 - **Cookie authentication**: Load cookies from Netscape `.txt` or JSON files for age-restricted videos via `cookiePath` option or `--cookies` CLI flag
 - **Retry with exponential backoff**: Configurable `RetryConfig` with `maxRetries`, `baseDelayMs`, `maxDelayMs`, `jitterFactor`. Retries on `RateLimitExceeded`, `NetworkError`, `TimeoutError`, `ConnectionError`, `RequestBlocked`
 - **`YouTubeTranscriptApiOptions`**: Options object as 3rd constructor parameter for `YouTubeTranscriptApi` (`retryConfig`, `cookiePath`)
@@ -31,6 +58,7 @@
 - Exported: `RetryConfig`, `DEFAULT_RETRY_CONFIG`, `loadCookiesFromFile`, `ParsedCookie`
 
 ### Removed
+
 - `xml2js` and `@types/xml2js` dependencies
 
 ## 2.2.0
