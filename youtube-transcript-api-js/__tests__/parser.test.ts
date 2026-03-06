@@ -173,6 +173,8 @@ describe('TranscriptParser', () => {
         // XML decodes &amp; → & and &lt; stays as literal text &lt;
         // The result should contain literal &lt; and &gt; since they weren't HTML tags
         expect(snippets[0]!.text).toContain('not bold');
+        expect(snippets[0]!.text).toContain('&lt;');
+        expect(snippets[0]!.text).toContain('&gt;');
       });
 
       it('should handle mixed literal and entity-encoded content', async () => {
