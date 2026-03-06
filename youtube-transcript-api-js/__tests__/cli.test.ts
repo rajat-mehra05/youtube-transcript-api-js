@@ -1,4 +1,5 @@
 import { AxiosInstance } from 'axios';
+import * as fs from 'fs';
 import { YouTubeTranscriptCli, main } from '../cli/index';
 import { YouTubeTranscriptApi } from '../api';
 import { FormatterLoader } from '../formatters';
@@ -7,6 +8,10 @@ import { GenericProxyConfig, WebshareProxyConfig } from '../proxies';
 
 // Mock the API module
 jest.mock('../api');
+
+// Mock fs module
+jest.mock('fs');
+const mockFs = fs as jest.Mocked<typeof fs>;
 
 // Mock the formatters module
 jest.mock('../formatters', () => ({
@@ -178,6 +183,7 @@ describe('YouTubeTranscriptCli', () => {
     });
 
     it('should error when both exclude flags are used together', async () => {
+      expect.assertions(2);
       try {
         await cli.run(['test123', '--exclude-manually-created', '--exclude-generated']);
       } catch (e: any) {
@@ -336,7 +342,10 @@ describe('YouTubeTranscriptCli', () => {
 
       await cli.run(['test123']);
 
-      expect(YouTubeTranscriptApi).toHaveBeenCalledWith(undefined);
+      const call = (YouTubeTranscriptApi as jest.Mock).mock.calls[0]!;
+      expect(call[0]).toBeUndefined(); // proxyConfig
+      expect(call[1]).toBeUndefined(); // httpClient
+      expect(call[2]).toBeUndefined(); // options
     });
 
     it('should prioritize webshare proxy over generic proxy', async () => {
@@ -376,21 +385,24 @@ describe('YouTubeTranscriptCli', () => {
       const originalArgv = process.argv;
       process.argv = ['node', 'cli.js', 'argvVideo'];
 
-      // Create new CLI instance and run with empty array to trigger fallback to process.argv
-      const testCli = new YouTubeTranscriptCli();
+      try {
+        // Create new CLI instance and run with empty array to trigger fallback to process.argv
+        const testCli = new YouTubeTranscriptCli();
 
-      // We need to trigger the else branch by passing something that isn't a valid video ID array
-      // The condition checks: Array.isArray(videoIds) && videoIds.length > 0 && typeof videoIds[0] === 'string' && !videoIds[0].startsWith('--')
-      // Passing an array starting with '--' should trigger the else branch
-      await testCli.run(['--format', 'json']);
+        // We need to trigger the else branch by passing something that isn't a valid video ID array
+        // The condition checks: Array.isArray(videoIds) && videoIds.length > 0 && typeof videoIds[0] === 'string' && !videoIds[0].startsWith('--')
+        // Passing an array starting with '--' should trigger the else branch
+        await testCli.run(['--format', 'json']);
 
-      process.argv = originalArgv;
-
-      // Should have extracted 'argvVideo' from process.argv
-      expect(mockApi.list).toHaveBeenCalledWith('argvVideo');
+        // Should have extracted 'argvVideo' from process.argv
+        expect(mockApi.list).toHaveBeenCalledWith('argvVideo');
+      } finally {
+        process.argv = originalArgv;
+      }
     });
 
     it('should show help and exit when no video IDs provided anywhere', async () => {
+      expect.assertions(1);
       // Set up process.argv with no video IDs (only flags)
       const originalArgv = process.argv;
       process.argv = ['node', 'cli.js'];
@@ -398,17 +410,16 @@ describe('YouTubeTranscriptCli', () => {
       // Mock stdout to capture help output
       const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation();
 
-      const testCli = new YouTubeTranscriptCli();
-
       try {
+        const testCli = new YouTubeTranscriptCli();
         await testCli.run([]);
       } catch (e: any) {
         // process.exit is called by Commander help - could be 0 or undefined
         expect(processExitSpy).toHaveBeenCalled();
+      } finally {
+        process.argv = originalArgv;
+        stdoutSpy.mockRestore();
       }
-
-      process.argv = originalArgv;
-      stdoutSpy.mockRestore();
     });
 
     it('should handle when videoIds starts with option flag', async () => {
@@ -425,15 +436,176 @@ describe('YouTubeTranscriptCli', () => {
       const originalArgv = process.argv;
       process.argv = ['node', 'cli.js', 'fallbackVideo', '--list-transcripts'];
 
-      const testCli = new YouTubeTranscriptCli();
-      // Pass array starting with '--' to trigger process.argv fallback
-      await testCli.run(['--list-transcripts']);
+      try {
+        const testCli = new YouTubeTranscriptCli();
+        // Pass array starting with '--' to trigger process.argv fallback
+        await testCli.run(['--list-transcripts']);
 
-      process.argv = originalArgv;
-
-      expect(mockApi.list).toHaveBeenCalledWith('fallbackVideo');
+        expect(mockApi.list).toHaveBeenCalledWith('fallbackVideo');
+      } finally {
+        process.argv = originalArgv;
+      }
     });
 
+  });
+
+  describe('--cookies flag', () => {
+    it('should pass cookiePath to YouTubeTranscriptApi options', async () => {
+      const mockTranscriptList = createMockTranscriptList('test123');
+      const mockFetchedTranscript = createMockTranscript('test123');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['test123', '--cookies', '/path/to/cookies.txt']);
+
+      expect(YouTubeTranscriptApi).toHaveBeenCalledWith(
+        undefined, undefined, { cookiePath: '/path/to/cookies.txt' }
+      );
+    });
+  });
+
+  describe('--verbose flag', () => {
+    it('should write debug output to stderr', async () => {
+      const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      const mockTranscriptList = createMockTranscriptList('test123');
+      const mockFetchedTranscript = createMockTranscript('test123');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['test123', '--verbose']);
+
+      const stderrCalls = stderrSpy.mock.calls.map(c => c[0]);
+      expect(stderrCalls.some(c => typeof c === 'string' && c.includes('[verbose]'))).toBe(true);
+      expect(stderrCalls.some(c => typeof c === 'string' && c.includes('Fetching transcript for: test123'))).toBe(true);
+
+      stderrSpy.mockRestore();
+    });
+
+    it('should not write verbose output without flag', async () => {
+      const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      const mockTranscriptList = createMockTranscriptList('test123');
+      const mockFetchedTranscript = createMockTranscript('test123');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['test123']);
+
+      const stderrCalls = stderrSpy.mock.calls.map(c => c[0]);
+      expect(stderrCalls.some(c => typeof c === 'string' && c.includes('[verbose]'))).toBe(false);
+
+      stderrSpy.mockRestore();
+    });
+  });
+
+  describe('--save flag', () => {
+    it('should write output to file instead of stdout', async () => {
+      mockFs.writeFileSync.mockImplementation(() => {});
+
+      const mockTranscriptList = createMockTranscriptList('test123');
+      const mockFetchedTranscript = createMockTranscript('test123');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['test123', '--save', '/tmp/output.txt']);
+
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        '/tmp/output.txt', expect.any(String), 'utf-8'
+      );
+      // Should NOT write to stdout when saving to file
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('--batch-file flag', () => {
+    it('should read video IDs from file', async () => {
+      mockFs.existsSync.mockReturnValue(true);
+      (mockFs.readFileSync as jest.Mock).mockReturnValue('video1\nvideo2\n# comment\n\nvideo3\n');
+
+      const mockTranscriptList = createMockTranscriptList('video1');
+      const mockFetchedTranscript = createMockTranscript('video1');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['--batch-file', '/tmp/ids.txt']);
+
+      // Should have called list for video1, video2, video3 (not comment or blank)
+      expect(mockApi.list).toHaveBeenCalledTimes(3);
+      expect(mockApi.list).toHaveBeenCalledWith('video1');
+      expect(mockApi.list).toHaveBeenCalledWith('video2');
+      expect(mockApi.list).toHaveBeenCalledWith('video3');
+    });
+
+    it('should merge batch file IDs with command-line IDs', async () => {
+      mockFs.existsSync.mockReturnValue(true);
+      (mockFs.readFileSync as jest.Mock).mockReturnValue('batchVideo\n');
+
+      const mockTranscriptList = createMockTranscriptList('cliVideo');
+      const mockFetchedTranscript = createMockTranscript('cliVideo');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+      mockApi.list.mockResolvedValue(mockTranscriptList);
+
+      await cli.run(['cliVideo', '--batch-file', '/tmp/ids.txt']);
+
+      expect(mockApi.list).toHaveBeenCalledTimes(2);
+      expect(mockApi.list).toHaveBeenCalledWith('cliVideo');
+      expect(mockApi.list).toHaveBeenCalledWith('batchVideo');
+    });
+
+    it('should error if batch file does not exist', async () => {
+      expect.assertions(2);
+      mockFs.existsSync.mockReturnValue(false);
+
+      try {
+        await cli.run(['--batch-file', '/nonexistent.txt']);
+      } catch (e: any) {
+        expect(e.message).toBe('process.exit(1)');
+      }
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error: Batch file not found: /nonexistent.txt');
+    });
+  });
+
+  describe('--fail-fast flag', () => {
+    it('should stop on first error and exit non-zero when --fail-fast is set', async () => {
+      expect.assertions(3);
+      mockApi.list
+        .mockRejectedValueOnce(new Error('Failed for video1'))
+        .mockResolvedValueOnce(createMockTranscriptList('video2'));
+
+      try {
+        await cli.run(['video1', 'video2', '--fail-fast']);
+      } catch (e: any) {
+        expect(e.message).toBe('process.exit(1)');
+      }
+
+      // Should only have called list once (stopped after first error)
+      expect(mockApi.list).toHaveBeenCalledTimes(1);
+      expect(processExitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should continue on error without --fail-fast (default)', async () => {
+      const mockTranscriptList = createMockTranscriptList('video2');
+      const mockFetchedTranscript = createMockTranscript('video2');
+      const mockTranscript = { fetch: jest.fn().mockResolvedValue(mockFetchedTranscript) };
+      mockTranscriptList.findTranscript = jest.fn().mockReturnValue(mockTranscript);
+
+      mockApi.list
+        .mockRejectedValueOnce(new Error('Failed for video1'))
+        .mockResolvedValueOnce(mockTranscriptList);
+
+      await cli.run(['video1', 'video2']);
+
+      // Should have called list for both videos
+      expect(mockApi.list).toHaveBeenCalledTimes(2);
+    });
   });
 });
 
@@ -469,6 +641,7 @@ describe('main function', () => {
   });
 
   it('should handle Error objects and exit with code 1', async () => {
+    expect.assertions(3);
     process.argv = ['node', 'cli.js', 'test123'];
 
     // Mock YouTubeTranscriptCli to throw when run() is called
@@ -486,6 +659,7 @@ describe('main function', () => {
   });
 
   it('should handle non-Error objects and exit with code 1', async () => {
+    expect.assertions(3);
     process.argv = ['node', 'cli.js', 'test123'];
 
     // Mock YouTubeTranscriptCli to throw a non-Error object when run() is called

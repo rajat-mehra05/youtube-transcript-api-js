@@ -1,5 +1,11 @@
 // Main API exports
-export { YouTubeTranscriptApi, createYouTubeTranscriptApi } from './api';
+export { YouTubeTranscriptApi, YouTubeTranscriptApiOptions, createYouTubeTranscriptApi } from './api';
+
+// Retry exports
+export { RetryConfig, DEFAULT_RETRY_CONFIG } from './retry';
+
+// Cookie exports
+export { loadCookiesFromFile, ParsedCookie } from './cookies';
 
 // Enhanced API exports
 export { EnhancedYouTubeTranscriptApi, VideoMetadataResult } from './enhanced-api';
@@ -55,6 +61,9 @@ export {
   TimestampedTextFormatter,
   FormatterLoader
 } from './formatters';
+
+// CLI exports
+export type { CliOptions } from './cli';
 
 // Proxy exports
 export {

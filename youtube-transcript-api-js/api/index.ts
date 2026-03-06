@@ -3,6 +3,18 @@ import { TranscriptListFetcher } from '../transcripts/fetcher';
 import { TranscriptList, FetchedTranscript } from '../transcripts/models';
 import { ProxyConfig } from '../proxies';
 import { InvalidProxyUrl, InvalidVideoId } from '../errors';
+import { RetryConfig } from '../retry';
+import { loadCookiesFromFile } from '../cookies';
+
+/**
+ * Options for YouTubeTranscriptApi constructor
+ */
+export interface YouTubeTranscriptApiOptions {
+  /** Retry configuration with exponential backoff */
+  retryConfig?: Partial<RetryConfig>;
+  /** Path to a cookie file (Netscape or JSON format) for authentication */
+  cookiePath?: string;
+}
 
 /**
  * Main YouTube Transcript API class
@@ -10,9 +22,18 @@ import { InvalidProxyUrl, InvalidVideoId } from '../errors';
 export class YouTubeTranscriptApi {
   private readonly fetcher: TranscriptListFetcher;
 
-  constructor(proxyConfig?: ProxyConfig, httpClient?: AxiosInstance) {
+  constructor(proxyConfig?: ProxyConfig, httpClient?: AxiosInstance, options?: YouTubeTranscriptApiOptions) {
     const client = httpClient || this.createHttpClient(proxyConfig);
-    this.fetcher = new TranscriptListFetcher(client, proxyConfig);
+
+    if (options?.cookiePath) {
+      const newCookies = loadCookiesFromFile(options.cookiePath);
+      const existing = client.defaults.headers.common['Cookie'];
+      client.defaults.headers.common['Cookie'] = existing
+        ? `${existing}; ${newCookies}`
+        : newCookies;
+    }
+
+    this.fetcher = new TranscriptListFetcher(client, proxyConfig, options?.retryConfig);
   }
 
   /**
@@ -145,8 +166,12 @@ export class YouTubeTranscriptApi {
 /**
  * Convenience function to create a new API instance
  */
-export function createYouTubeTranscriptApi(proxyConfig?: ProxyConfig, httpClient?: AxiosInstance): YouTubeTranscriptApi {
-  return new YouTubeTranscriptApi(proxyConfig, httpClient);
+export function createYouTubeTranscriptApi(
+  proxyConfig?: ProxyConfig,
+  httpClient?: AxiosInstance,
+  options?: YouTubeTranscriptApiOptions
+): YouTubeTranscriptApi {
+  return new YouTubeTranscriptApi(proxyConfig, httpClient, options);
 }
 
 /**

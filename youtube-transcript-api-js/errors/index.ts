@@ -178,9 +178,10 @@ export class AgeRestricted extends CouldNotRetrieveTranscript {
   protected getCause(): string {
     return 'This video is age-restricted. Therefore, you are unable to retrieve ' +
            'transcripts for it without authenticating yourself.\n\n' +
-           'Unfortunately, Cookie Authentication is temporarily unsupported in ' +
-           'youtube-transcript-api, as recent changes in YouTube\'s API broke the previous ' +
-           'implementation. I will do my best to re-implement it as soon as possible.';
+           'You can authenticate by providing a cookie file using the `cookiePath` option ' +
+           'in the YouTubeTranscriptApi constructor, or the `--cookies` flag in the CLI.\n' +
+           'Export your YouTube cookies from your browser using a "cookies.txt" extension ' +
+           'and pass the file path to authenticate.';
   }
 }
 

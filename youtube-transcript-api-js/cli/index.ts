@@ -1,10 +1,11 @@
+import * as fs from 'fs';
 import { Command } from 'commander';
 import { YouTubeTranscriptApi } from '../api';
 import { GenericProxyConfig, WebshareProxyConfig, ProxyConfig } from '../proxies';
 import { FormatterLoader } from '../formatters';
 import { TranscriptList, FetchedTranscript } from '../transcripts/models';
 
-interface CliOptions {
+export interface CliOptions {
   videoIds?: string[];
   listTranscripts?: boolean;
   languages: string[];
@@ -16,6 +17,11 @@ interface CliOptions {
   webshareProxyPassword?: string;
   httpProxy?: string;
   httpsProxy?: string;
+  cookies?: string;
+  verbose?: boolean;
+  save?: string;
+  batchFile?: string;
+  failFast?: boolean;
 }
 
 /**
@@ -89,6 +95,26 @@ export class YouTubeTranscriptCli {
         '--https-proxy <url>',
         'Use the specified HTTPS proxy.'
       )
+      .option(
+        '--cookies <file>',
+        'Path to a cookie file (Netscape or JSON format) for authentication (e.g. age-restricted videos).'
+      )
+      .option(
+        '--verbose',
+        'Print debug information to stderr.'
+      )
+      .option(
+        '--save <file>',
+        'Write output to a file instead of stdout.'
+      )
+      .option(
+        '--batch-file <file>',
+        'Read video IDs from a file (one per line, lines starting with # are ignored).'
+      )
+      .option(
+        '--fail-fast',
+        'Exit immediately on the first error instead of continuing with remaining videos.'
+      )
       .action(this.handleCommand.bind(this));
   }
 
@@ -103,13 +129,14 @@ export class YouTubeTranscriptCli {
       } else if (options && Array.isArray(options.videoIds)) {
         // Arguments might be in options
         videoIds = options.videoIds;
-      } else {
+      } else if (!options.batchFile) {
         // Try to get from process.argv, skipping flags and their values
         const args = process.argv.slice(2);
         const FLAGS_WITH_VALUES = new Set([
           '--languages', '--format', '--translate',
           '--webshare-proxy-username', '--webshare-proxy-password',
           '--http-proxy', '--https-proxy',
+          '--cookies', '--save', '--batch-file',
         ]);
         const videoIdArgs: string[] = [];
         for (let i = 0; i < args.length; i++) {
@@ -127,6 +154,21 @@ export class YouTubeTranscriptCli {
         }
       }
       
+      // Load video IDs from batch file if specified (before empty check)
+      if (options.batchFile) {
+        if (!fs.existsSync(options.batchFile)) {
+          console.error(`Error: Batch file not found: ${options.batchFile}`);
+          process.exit(1);
+        }
+        const fileContent = fs.readFileSync(options.batchFile, 'utf-8');
+        const fileIds = fileContent
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line && !line.startsWith('#'));
+        this.log(`Loaded ${fileIds.length} video IDs from batch file: ${options.batchFile}`, options);
+        videoIds = [...(videoIds || []), ...fileIds];
+      }
+
       if (!videoIds || videoIds.length === 0) {
         this.program.help();
         return;
@@ -141,13 +183,22 @@ export class YouTubeTranscriptCli {
       }
 
       const proxyConfig = this.createProxyConfig(options);
-      const api = new YouTubeTranscriptApi(proxyConfig);
+      if (options.verbose && proxyConfig) {
+        this.log(`Using proxy: ${proxyConfig.constructor.name}`, options);
+      }
+
+      const apiOptions = options.cookies ? { cookiePath: options.cookies } : undefined;
+      if (options.cookies) {
+        this.log(`Loading cookies from: ${options.cookies}`, options);
+      }
+      const api = new YouTubeTranscriptApi(proxyConfig, undefined, apiOptions);
 
       const results: (TranscriptList | FetchedTranscript)[] = [];
       const errors: Error[] = [];
 
       for (const videoId of videoIds) {
         try {
+          this.log(`Fetching transcript for: ${videoId}`, options);
           if (options.listTranscripts) {
             const transcriptList = await api.list(videoId);
             results.push(transcriptList);
@@ -155,12 +206,21 @@ export class YouTubeTranscriptCli {
             const transcript = await this.fetchTranscript(api, videoId, options);
             results.push(transcript);
           }
+          this.log(`Successfully fetched: ${videoId}`, options);
         } catch (error) {
+          this.log(`Error for ${videoId}: ${(error as Error).message}`, options);
           errors.push(error as Error);
+          if (options.failFast) {
+            break;
+          }
         }
       }
 
-      this.printResults(results, errors, options);
+      this.outputResults(results, errors, options);
+
+      if (options.failFast && errors.length > 0) {
+        process.exit(1);
+      }
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -212,21 +272,28 @@ export class YouTubeTranscriptCli {
   }
 
   /**
-   * Print results to console
+   * Log verbose output to stderr
    */
-  private printResults(
+  private log(message: string, options: CliOptions): void {
+    if (options.verbose) {
+      process.stderr.write(`[verbose] ${message}\n`);
+    }
+  }
+
+  /**
+   * Format results and output to stdout or file
+   */
+  private outputResults(
     results: (TranscriptList | FetchedTranscript)[],
     errors: Error[],
     options: CliOptions
   ): void {
     const outputSections: string[] = [];
 
-    // Add error messages
     for (const error of errors) {
       outputSections.push(error.message);
     }
 
-    // Add results
     if (results.length > 0) {
       if (options.listTranscripts) {
         for (const result of results) {
@@ -243,7 +310,14 @@ export class YouTubeTranscriptCli {
       }
     }
 
-    console.log(outputSections.join('\n\n'));
+    const content = outputSections.join('\n\n');
+
+    if (options.save) {
+      fs.writeFileSync(options.save, content, 'utf-8');
+      this.log(`Output written to: ${options.save}`, options);
+    } else {
+      console.log(content);
+    }
   }
 
   /**

@@ -177,7 +177,7 @@ describe('TranscriptListFetcher', () => {
       },
     } as unknown as jest.Mocked<AxiosInstance>;
 
-    fetcher = new TranscriptListFetcher(mockHttpClient);
+    fetcher = new TranscriptListFetcher(mockHttpClient, undefined, { maxRetries: 0 });
   });
 
   describe('fetch', () => {
@@ -319,20 +319,27 @@ describe('TranscriptListFetcher', () => {
     });
 
     it('should retry when bot detected and retries configured', async () => {
-      const fetcherWithRetries = new TranscriptListFetcher(mockHttpClient, new MockProxyConfig(2));
+      jest.useFakeTimers();
+      try {
+        const fetcherWithRetries = new TranscriptListFetcher(mockHttpClient, new MockProxyConfig(2));
 
-      mockHttpClient.get
-        .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML })
-        .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
-      mockHttpClient.post
-        .mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED })
-        .mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });
+        mockHttpClient.get
+          .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML })
+          .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+        mockHttpClient.post
+          .mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED })
+          .mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });
 
-      const result = await fetcherWithRetries.fetch(TEST_VIDEO_ID);
+        const fetchPromise = fetcherWithRetries.fetch(TEST_VIDEO_ID);
+        await jest.advanceTimersByTimeAsync(60000);
+        const result = await fetchPromise;
 
-      expect(result).toBeDefined();
-      expect(mockHttpClient.get).toHaveBeenCalledTimes(2);
-      expect(mockHttpClient.post).toHaveBeenCalledTimes(2);
+        expect(result).toBeDefined();
+        expect(mockHttpClient.get).toHaveBeenCalledTimes(2);
+        expect(mockHttpClient.post).toHaveBeenCalledTimes(2);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
@@ -385,7 +392,7 @@ describe('TranscriptListFetcher', () => {
       const result = await fetcher.fetch(TEST_VIDEO_ID);
 
       expect(result).toBeDefined();
-      expect(mockHttpClient.defaults.headers.cookie).toContain('CONSENT=YES+abc123consent');
+      expect(mockHttpClient.defaults.headers.common['Cookie']).toContain('CONSENT=YES+abc123consent');
       expect(mockHttpClient.get).toHaveBeenCalledTimes(2);
     });
 
@@ -557,6 +564,187 @@ describe('TranscriptListFetcher', () => {
       mockHttpClient.post.mockRejectedValueOnce(axiosError);
 
       await expect(fetcher.fetch(TEST_VIDEO_ID)).rejects.toThrow(ConnectionError);
+    });
+  });
+
+  describe('retry with exponential backoff', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should retry on RateLimitExceeded and succeed', async () => {
+      const retryFetcher = new TranscriptListFetcher(mockHttpClient, undefined, { maxRetries: 2 });
+
+      const rateLimitError = new AxiosError('Too Many Requests');
+      rateLimitError.response = { status: 429, headers: { 'retry-after': '1' }, data: '', statusText: '', config: {} as any };
+
+      mockHttpClient.get
+        .mockRejectedValueOnce(rateLimitError)
+        .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post
+        .mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });
+
+      const fetchPromise = retryFetcher.fetch(TEST_VIDEO_ID);
+      await jest.advanceTimersByTimeAsync(60000);
+      const result = await fetchPromise;
+
+      expect(result).toBeDefined();
+      expect(mockHttpClient.get).toHaveBeenCalledTimes(2);
+    });
+
+    it('should retry on TimeoutError and succeed', async () => {
+      const retryFetcher = new TranscriptListFetcher(mockHttpClient, undefined, { maxRetries: 1 });
+
+      const timeoutError = new AxiosError('timeout');
+      timeoutError.code = 'ECONNABORTED';
+      timeoutError.config = { timeout: 10000 } as any;
+
+      mockHttpClient.get
+        .mockRejectedValueOnce(timeoutError)
+        .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post
+        .mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });
+
+      const fetchPromise = retryFetcher.fetch(TEST_VIDEO_ID);
+      await jest.advanceTimersByTimeAsync(60000);
+      const result = await fetchPromise;
+
+      expect(result).toBeDefined();
+      expect(mockHttpClient.get).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not retry on AgeRestricted', async () => {
+      const retryFetcher = new TranscriptListFetcher(mockHttpClient, undefined, { maxRetries: 3 });
+
+      mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_AGE_RESTRICTED });
+
+      await expect(retryFetcher.fetch(TEST_VIDEO_ID)).rejects.toThrow(AgeRestricted);
+      expect(mockHttpClient.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw after exhausting retries', async () => {
+      const retryFetcher = new TranscriptListFetcher(mockHttpClient, undefined, { maxRetries: 1 });
+
+      const makeTimeoutError = () => {
+        const err = new AxiosError('timeout');
+        err.code = 'ECONNABORTED';
+        err.config = { timeout: 10000 } as any;
+        return err;
+      };
+
+      mockHttpClient.get
+        .mockRejectedValueOnce(makeTimeoutError())
+        .mockRejectedValueOnce(makeTimeoutError());
+
+      // Capture rejection before advancing timers to avoid unhandled rejection
+      let caughtError: unknown;
+      const fetchPromise = retryFetcher.fetch(TEST_VIDEO_ID).catch((e) => { caughtError = e; });
+      await jest.advanceTimersByTimeAsync(60000);
+      await fetchPromise;
+
+      expect(caughtError).toBeInstanceOf(TimeoutError);
+      expect(mockHttpClient.get).toHaveBeenCalledTimes(2);
+    });
+
+    it('should disable retries with maxRetries: 0', async () => {
+      const noRetryFetcher = new TranscriptListFetcher(mockHttpClient, undefined, { maxRetries: 0 });
+
+      mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED });
+
+      await expect(noRetryFetcher.fetch(TEST_VIDEO_ID)).rejects.toThrow(RequestBlocked);
+      expect(mockHttpClient.post).toHaveBeenCalledTimes(1);
+    });
+
+    it('should clamp negative maxRetries to default', async () => {
+      const negativeFetcher = new TranscriptListFetcher(mockHttpClient, undefined, { maxRetries: -5 });
+
+      mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED });
+
+      // With default maxRetries (3), it would retry. But since -5 is invalid and falls back to 3,
+      // we just verify it doesn't infinite-loop or crash — it should still eventually throw.
+      let caughtError: unknown;
+      const fetchPromise = negativeFetcher.fetch(TEST_VIDEO_ID).catch((e) => { caughtError = e; });
+
+      // Supply enough mocks for retries
+      for (let i = 0; i < 3; i++) {
+        mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+        mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED });
+      }
+
+      await jest.advanceTimersByTimeAsync(120000);
+      await fetchPromise;
+
+      expect(caughtError).toBeInstanceOf(RequestBlocked);
+    });
+
+    it('should clamp NaN maxRetries to default', async () => {
+      const nanFetcher = new TranscriptListFetcher(mockHttpClient, undefined, { maxRetries: NaN });
+
+      mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED });
+
+      for (let i = 0; i < 3; i++) {
+        mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+        mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED });
+      }
+
+      let caughtError: unknown;
+      const fetchPromise = nanFetcher.fetch(TEST_VIDEO_ID).catch((e) => { caughtError = e; });
+      await jest.advanceTimersByTimeAsync(120000);
+      await fetchPromise;
+
+      expect(caughtError).toBeInstanceOf(RequestBlocked);
+    });
+
+    it('should floor fractional maxRetries', async () => {
+      // maxRetries: 1.9 should become 1 (floor), so 2 total attempts
+      const fracFetcher = new TranscriptListFetcher(mockHttpClient, undefined, { maxRetries: 1.9 });
+
+      const makeTimeoutError = () => {
+        const err = new AxiosError('timeout');
+        err.code = 'ECONNABORTED';
+        err.config = { timeout: 10000 } as any;
+        return err;
+      };
+
+      mockHttpClient.get
+        .mockRejectedValueOnce(makeTimeoutError())
+        .mockRejectedValueOnce(makeTimeoutError());
+
+      let caughtError: unknown;
+      const fetchPromise = fracFetcher.fetch(TEST_VIDEO_ID).catch((e) => { caughtError = e; });
+      await jest.advanceTimersByTimeAsync(60000);
+      await fetchPromise;
+
+      expect(caughtError).toBeInstanceOf(TimeoutError);
+      expect(mockHttpClient.get).toHaveBeenCalledTimes(2); // 1 + 1 retry = 2 attempts
+    });
+
+    it('should use proxyConfig.retriesWhenBlocked when retryConfig.maxRetries not specified', async () => {
+      const proxyFetcher = new TranscriptListFetcher(mockHttpClient, new MockProxyConfig(2));
+
+      mockHttpClient.get
+        .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML })
+        .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML })
+        .mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post
+        .mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED })
+        .mockResolvedValueOnce({ data: MOCK_INNERTUBE_BOT_DETECTED })
+        .mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });
+
+      const fetchPromise = proxyFetcher.fetch(TEST_VIDEO_ID);
+      await jest.advanceTimersByTimeAsync(120000);
+      const result = await fetchPromise;
+
+      expect(result).toBeDefined();
+      expect(mockHttpClient.post).toHaveBeenCalledTimes(3);
     });
   });
 });
