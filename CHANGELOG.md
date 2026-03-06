@@ -1,7 +1,5 @@
 # youtube-transcript-api-js
 
-## [Unreleased]
-
 ## 3.0.0
 
 ### Breaking Changes
