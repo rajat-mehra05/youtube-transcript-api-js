@@ -1,5 +1,11 @@
 # youtube-transcript-api-js
 
+## 3.0.1
+
+### Security
+
+- Upgraded `axios` from ^1.6.0 to ^1.13.5 to address a security vulnerability
+
 ## 3.0.0
 
 ### Breaking Changes
