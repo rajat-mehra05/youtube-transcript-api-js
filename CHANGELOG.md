@@ -4,7 +4,7 @@
 
 ### Security
 
-- Upgraded `axios` from 1.12.1 to 1.13.5 to address a security vulnerability
+- Upgraded `axios` from ^1.6.0 to ^1.13.5 to address a security vulnerability
 
 ## 3.0.0
 
