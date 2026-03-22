@@ -59,7 +59,7 @@
   "dependencies": {
     "axios": "^1.13.5",
     "commander": "^11.1.0",
-    "fast-xml-parser": "^5.4.2",
+    "fast-xml-parser": "^5.5.8",
     "html-entities": "^2.6.0",
     "http-proxy-agent": "^7.0.2",
     "https-proxy-agent": "^7.0.6"
