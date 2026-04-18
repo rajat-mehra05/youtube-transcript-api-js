@@ -1,5 +1,11 @@
 # youtube-transcript-api-js
 
+## 3.0.3
+
+### Patch Changes
+
+- 586da2b: Upgrade axios to 1.15.0 to fix CVE-2025-62718 (Confused Deputy, CVSS 9.3)
+
 ## 3.0.1
 
 ### Security
