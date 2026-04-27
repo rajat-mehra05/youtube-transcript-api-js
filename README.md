@@ -1,3 +1,12 @@
+<p align="center">
+  <a href="https://www.npmjs.com/package/youtube-transcript-api-js">
+    <img src="https://img.shields.io/npm/v/youtube-transcript-api-js?logo=npm&style=flat-square" />
+  </a>
+  <a href="https://www.npmjs.com/package/youtube-transcript-api-js">
+    <img src="https://img.shields.io/npm/dw/youtube-transcript-api-js?logo=npm&style=flat-square" />
+  </a>
+</p>
+
 # YouTube Transcript API
 
 A lightweight JavaScript/TypeScript library for retrieving transcripts and subtitles from YouTube videos. Supports manual and auto-generated captions, multiple languages, translation, and various output formats — no API keys or browser automation required.
