@@ -1,5 +1,14 @@
 # youtube-transcript-api-js
 
+## 3.0.4
+
+### Patch Changes
+
+- aa60ab1: Remove the unused html-entities dependency. It was declared but never imported anywhere in source; HTML unescaping is hand-rolled in fetcher.ts
+- 865bf36: Modernize the dev toolchain: upgrade eslint to 10.x (flat config), migrate to the unified typescript-eslint package (8.x), upgrade jest to 30.x with matching @types/jest, upgrade @types/node to 24.x, and override esbuild to 0.28.1. Fixes the remaining transitive CVEs (minimatch, ajv, esbuild) and the last Dependabot alerts from the security audit
+- eb88453: Upgrade axios to 1.18.1 and fast-xml-parser to 5.9.3 to fix multiple CVEs (prototype pollution/MITM via config.proxy, credential leaks, ReDoS, XML injection)
+- db9c8e0: Upgrade ts-jest to 29.4.11 and @changesets/cli to 2.31.0, and refresh transitive dev dependencies (handlebars, js-yaml, picomatch, minimatch, flatted, @babel/core, brace-expansion) to fix multiple CVEs, including a critical JS injection issue in handlebars
+
 ## 3.0.3
 
 ### Patch Changes
