@@ -63,7 +63,7 @@ export class JSONFormatter extends Formatter {
  * Plain text formatter
  */
 export class TextFormatter extends Formatter {
-  formatTranscript(transcript: FetchedTranscript, options: FormatterOptions = {}): string {
+  formatTranscript(transcript: FetchedTranscript, _options: FormatterOptions = {}): string {
     return transcript.snippets.map(snippet => snippet.text).join('\n');
   }
 
@@ -106,7 +106,7 @@ export abstract class TextBasedFormatter extends TextFormatter {
     return this.formatTimestamp(hours, mins, secs, ms);
   }
 
-  formatTranscript(transcript: FetchedTranscript, options: FormatterOptions = {}): string {
+  formatTranscript(transcript: FetchedTranscript, _options: FormatterOptions = {}): string {
     const lines: string[] = [];
 
     for (let i = 0; i < transcript.snippets.length; i++) {

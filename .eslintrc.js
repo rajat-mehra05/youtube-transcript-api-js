@@ -1,5 +1,6 @@
 module.exports = {
   parser: '@typescript-eslint/parser',
+  plugins: ['@typescript-eslint'],
   extends: [
     'eslint:recommended',
   ],
@@ -8,7 +9,8 @@ module.exports = {
     sourceType: 'module',
   },
   rules: {
-    'no-unused-vars': 'warn',
+    'no-unused-vars': 'off',
+    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     'no-undef': 'off', // Turn off for test files
   },
   env: {

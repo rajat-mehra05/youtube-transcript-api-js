@@ -16,7 +16,7 @@ import {
   ConnectionError,
 } from '../errors';
 import { ProxyConfig, RequestsProxyConfig } from '../proxies';
-import { TEST_VIDEO_ID, VALID_TRANSCRIPT_XML } from './__fixtures__/youtube-responses';
+import { TEST_VIDEO_ID } from './__fixtures__/youtube-responses';
 
 class MockProxyConfig extends ProxyConfig {
   private readonly _retriesWhenBlocked: number;
