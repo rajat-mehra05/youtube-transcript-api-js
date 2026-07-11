@@ -60,7 +60,6 @@
     "axios": "^1.18.1",
     "commander": "^14.0.3",
     "fast-xml-parser": "^5.9.3",
-    "html-entities": "^2.6.0",
     "http-proxy-agent": "^7.0.2",
     "https-proxy-agent": "^7.0.6"
   },
