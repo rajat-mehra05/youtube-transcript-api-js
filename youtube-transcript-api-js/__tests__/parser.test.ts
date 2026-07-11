@@ -124,7 +124,7 @@ describe('TranscriptParser', () => {
         expect(snippets[0]!.text).toContain('</b>');
       });
 
-      it('should keep text inside a non-formatting tag when preserveFormatting is true', async () => {
+      it('should strip an attribute-bearing tag but keep its text and formatting when preserveFormatting is true', async () => {
         const parser = new TranscriptParser(true);
         const xml = `<?xml version="1.0" encoding="utf-8" ?>
 <transcript>
@@ -135,6 +135,7 @@ describe('TranscriptParser', () => {
 
         expect(snippets[0]!.text).toContain('click here');
         expect(snippets[0]!.text).toContain('<b>bold</b>');
+        expect(snippets[0]!.text).not.toContain('<a');
       });
 
       it('should strip an attribute-bearing tag but keep its text when preserveFormatting is false', async () => {
