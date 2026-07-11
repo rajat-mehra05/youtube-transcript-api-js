@@ -16,8 +16,8 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup && cp youtube-transcript-api-js/cli.js dist/",
-    "build:tsc": "tsc && cp youtube-transcript-api-js/cli.js dist/",
-    "dev": "tsc --watch",
+    "build:tsc": "tsc -p tsconfig.build.json && cp youtube-transcript-api-js/cli.js dist/",
+    "dev": "tsc -p tsconfig.build.json --watch",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
