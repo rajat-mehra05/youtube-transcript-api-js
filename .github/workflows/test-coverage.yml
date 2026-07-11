@@ -16,6 +16,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          # Full history so the coverage action can diff PR head against base.
+          # A shallow clone makes its base/head git checkout fail (exit 128).
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
