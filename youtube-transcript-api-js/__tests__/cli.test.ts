@@ -440,7 +440,7 @@ describe('YouTubeTranscriptCli', () => {
       try {
         const testCli = new YouTubeTranscriptCli();
         await testCli.run([]);
-      } catch (e: any) {
+      } catch {
         // process.exit is called by Commander help - could be 0 or undefined
         expect(processExitSpy).toHaveBeenCalled();
       } finally {
