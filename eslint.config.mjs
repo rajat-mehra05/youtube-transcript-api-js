@@ -16,7 +16,6 @@ export default [
       globals: {
         ...globals.node,
         ...globals.es2015,
-        ...globals.jest,
       },
     },
     plugins: {
@@ -25,7 +24,15 @@ export default [
     rules: {
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      'no-undef': 'off', // Turn off for test files
+      'no-undef': 'off',
+    },
+  },
+  {
+    files: ['**/__tests__/**/*.ts', '**/*.test.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
     },
   },
 ];
