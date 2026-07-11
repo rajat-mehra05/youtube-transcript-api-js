@@ -307,23 +307,16 @@ const api = new YouTubeTranscriptApi(proxyConfig);
 
 ### Enhanced API with Proxy
 
-For advanced use cases with Invidious fallback support.
+Adds proxy support, formatter output, and video metadata on top of the base API.
 
 ```typescript
 import { EnhancedYouTubeTranscriptApi } from 'youtube-transcript-api-js';
 
-const api = new EnhancedYouTubeTranscriptApi(
-  {
-    enabled: true,
-    http: 'http://user:pass@proxy.example.com:8080',
-    https: 'http://user:pass@proxy.example.com:8080'
-  },
-  {
-    enabled: true,
-    instanceUrls: ['https://invidious.example.com'],
-    timeout: 10000
-  }
-);
+const api = new EnhancedYouTubeTranscriptApi({
+  enabled: true,
+  http: 'http://user:pass@proxy.example.com:8080',
+  https: 'http://user:pass@proxy.example.com:8080'
+});
 
 const transcript = await api.fetch('VIDEO_ID');
 ```

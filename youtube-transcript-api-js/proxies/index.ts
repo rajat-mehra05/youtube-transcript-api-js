@@ -19,21 +19,6 @@ export interface ProxyOptions {
 }
 
 /**
- * Invidious configuration options for fallback when YouTube blocks requests
- */
-export interface InvidiousOptions {
-  /** Enable Invidious fallback (default: false) */
-  enabled: boolean;
-  /**
-   * Invidious instance URL(s). Can be a single URL string or an array of URLs for fallback.
-   * If an array is provided, instances will be tried in order until one works.
-   */
-  instanceUrls: string | string[];
-  /** Timeout in milliseconds for Invidious requests (default: 10000) */
-  timeout?: number;
-}
-
-/**
  * Base class for all proxy configurations
  */
 export abstract class ProxyConfig {

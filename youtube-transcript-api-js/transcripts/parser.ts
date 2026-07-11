@@ -84,10 +84,12 @@ export class TranscriptParser {
   private getHtmlRegex(preserveFormatting: boolean): RegExp {
     if (preserveFormatting) {
       const formatsRegex = FORMATTING_TAGS.join('|');
-      const pattern = `</?(?!/?(${formatsRegex})\\b).*?\\b>`;
+      // [^<>] (not .*) keeps this linear: a failed scan stops at the next '<'
+      // instead of running to end-of-string on hostile input.
+      const pattern = `</?(?!/?(${formatsRegex})\\b)[^<>]*>`;
       return new RegExp(pattern, 'gi');
     } else {
-      return /<[^>]*>/gi;
+      return /<[^<>]*>/gi;
     }
   }
 }

@@ -1,18 +1,8 @@
-import axios, { AxiosInstance, CreateAxiosDefaults } from 'axios';
-import http from 'node:http';
-import https from 'node:https';
-import { HttpProxyAgent } from 'http-proxy-agent';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 import { YouTubeTranscriptApi } from '../api';
-import { ProxyOptions, InvidiousOptions, EnhancedProxyConfig } from '../proxies';
+import { ProxyOptions, EnhancedProxyConfig } from '../proxies';
 import { YouTubeTranscriptApiException } from '../errors';
 import { FormatterLoader } from '../formatters';
 import { FetchedTranscript } from '../transcripts/models';
-
-/** Check if running in a Node.js (non-browser) environment */
-function isNodeEnvironment(): boolean {
-  return typeof (globalThis as { window?: unknown }).window === 'undefined';
-}
 
 /**
  * Normalized video metadata returned by getVideoMetadata()
@@ -28,23 +18,14 @@ export interface VideoMetadataResult {
   isLiveContent: boolean;
 }
 
-const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36,gzip(gfe)';
-
 /**
- * Enhanced YouTube Transcript API with advanced proxy and Invidious support
+ * YouTube Transcript API with proxy support, formatter output, and video metadata
  */
 export class EnhancedYouTubeTranscriptApi {
-  private httpClient!: AxiosInstance;
-  private invidiousClient: AxiosInstance | null = null;
   private baseApi: YouTubeTranscriptApi;
   private proxyOptions: ProxyOptions;
-  private invidiousOptions: InvidiousOptions;
 
-  constructor(
-    proxyOptions: Partial<ProxyOptions> = {},
-    invidiousOptions: Partial<InvidiousOptions> = {}
-  ) {
-    // Default proxy options
+  constructor(proxyOptions: Partial<ProxyOptions> = {}) {
     this.proxyOptions = {
       enabled: false,
       http: '',
@@ -52,24 +33,7 @@ export class EnhancedYouTubeTranscriptApi {
       ...proxyOptions,
     };
 
-    // Default Invidious options
-    this.invidiousOptions = {
-      enabled: false,
-      instanceUrls: '',
-      timeout: 10000,
-      ...invidiousOptions,
-    };
-
-    // Initialize base API with proxy config if enabled
     this.baseApi = this.createBaseApi();
-
-    // Initialize HTTP client with enhanced proxy support
-    this.initializeHttpClient();
-
-    // Initialize Invidious client if enabled
-    if (this.invidiousOptions.enabled) {
-      this.initializeInvidiousClient();
-    }
   }
 
   /**
@@ -84,102 +48,15 @@ export class EnhancedYouTubeTranscriptApi {
   }
 
   /**
-   * Initialize HTTP client with enhanced proxy support
-   */
-  private initializeHttpClient(): void {
-    const config: CreateAxiosDefaults = {
-      headers: {
-        'Accept-Language': 'en-US',
-        'User-Agent': USER_AGENT,
-        'Accept-Encoding': 'gzip, deflate, br',
-      },
-      timeout: 10000,
-      maxRedirects: 5,
-    };
-
-    // Add proxy configuration if enabled
-    if (this.proxyOptions.enabled) {
-      config.proxy = false; // Disable built-in proxy resolver
-
-      // Only use proxy agents in Node.js environments
-      if (isNodeEnvironment()) {
-        config.httpAgent = new HttpProxyAgent(this.proxyOptions.http || '');
-        config.httpsAgent = new HttpsProxyAgent(
-          this.proxyOptions.https || this.proxyOptions.http || ''
-        );
-      }
-    } else if (isNodeEnvironment()) {
-      // Use keep-alive agents when not using proxy
-      config.httpAgent = new http.Agent({ keepAlive: true });
-      config.httpsAgent = new https.Agent({ keepAlive: true });
-    }
-
-    this.httpClient = axios.create(config);
-  }
-
-  /**
-   * Initialize Invidious client
-   */
-  private initializeInvidiousClient(): void {
-    const instanceUrls = Array.isArray(this.invidiousOptions.instanceUrls)
-      ? this.invidiousOptions.instanceUrls
-      : [this.invidiousOptions.instanceUrls];
-
-    if (instanceUrls.length === 0 || (instanceUrls.length === 1 && !instanceUrls[0])) {
-      throw new Error('At least one Invidious instance URL must be provided when Invidious is enabled');
-    }
-
-    const primaryInstanceUrl = instanceUrls[0]!;
-
-    const config: CreateAxiosDefaults = {
-      baseURL: primaryInstanceUrl,
-      timeout: this.invidiousOptions.timeout || 10000,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': USER_AGENT,
-      },
-    };
-
-    // Add proxy configuration if enabled
-    if (this.proxyOptions.enabled && isNodeEnvironment()) {
-      config.proxy = false;
-      config.httpAgent = new HttpProxyAgent(this.proxyOptions.http || '');
-      config.httpsAgent = new HttpsProxyAgent(
-        this.proxyOptions.https || this.proxyOptions.http || ''
-      );
-    }
-
-    this.invidiousClient = axios.create(config);
-  }
-
-  /**
    * Configure proxy settings
    */
   public setProxyOptions(options: Partial<ProxyOptions>): void {
     this.proxyOptions = { ...this.proxyOptions, ...options };
     this.baseApi = this.createBaseApi();
-    this.initializeHttpClient();
-    
-    if (this.invidiousOptions.enabled) {
-      this.initializeInvidiousClient();
-    }
   }
 
   /**
-   * Configure Invidious settings
-   */
-  public setInvidiousOptions(options: Partial<InvidiousOptions>): void {
-    this.invidiousOptions = { ...this.invidiousOptions, ...options };
-    
-    if (this.invidiousOptions.enabled) {
-      this.initializeInvidiousClient();
-    } else {
-      this.invidiousClient = null;
-    }
-  }
-
-  /**
-   * Fetch transcript with enhanced proxy support
+   * Fetch transcript, optionally formatted with a named formatter
    */
   public async fetch(
     videoId: string,

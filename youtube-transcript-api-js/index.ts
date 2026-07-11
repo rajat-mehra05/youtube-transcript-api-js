@@ -73,7 +73,6 @@ export {
   EnhancedProxyConfig,
   InvalidProxyConfig,
   RequestsProxyConfig,
-  ProxyOptions,
-  InvidiousOptions
+  ProxyOptions
 } from './proxies';
 
