@@ -255,7 +255,7 @@ export class TranscriptListFetcher {
    * Fetch HTML content
    */
   private async fetchHtml(videoId: string): Promise<string> {
-    const url = WATCH_URL.replace('{videoId}', videoId);
+    const url = WATCH_URL.replace('{videoId}', encodeURIComponent(videoId));
     try {
       const response = await this.httpClient.get(url);
       return this.unescapeHtml(response.data);

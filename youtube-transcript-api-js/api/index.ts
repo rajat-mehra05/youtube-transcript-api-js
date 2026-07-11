@@ -6,6 +6,10 @@ import { InvalidProxyUrl, InvalidVideoId } from '../errors';
 import { RetryConfig } from '../retry';
 import { loadCookiesFromFile } from '../cookies';
 
+// Cap size so a hostile/compromised upstream can't stream an unbounded
+// (or decompression-bomb) body into memory. Axios default is -1 (unlimited).
+const MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
+
 /**
  * Options for YouTubeTranscriptApi constructor
  */
@@ -42,6 +46,8 @@ export class YouTubeTranscriptApi {
   private createHttpClient(proxyConfig?: ProxyConfig): AxiosInstance {
     const client = axios.create({
       timeout: 10000,
+      maxContentLength: MAX_RESPONSE_BYTES,
+      maxBodyLength: MAX_RESPONSE_BYTES,
       headers: {
         'Accept-Language': 'en-US',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'

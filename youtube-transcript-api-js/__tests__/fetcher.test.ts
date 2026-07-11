@@ -194,6 +194,17 @@ describe('TranscriptListFetcher', () => {
       );
     });
 
+    it('should URL-encode the video id so it cannot inject query parameters', async () => {
+      mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
+      mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });
+
+      await fetcher.fetch('abc&list=EVIL');
+
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        'https://www.youtube.com/watch?v=abc%26list%3DEVIL'
+      );
+    });
+
     it('should build transcript list with generated and manual transcripts', async () => {
       mockHttpClient.get.mockResolvedValueOnce({ data: MOCK_VIDEO_HTML });
       mockHttpClient.post.mockResolvedValueOnce({ data: MOCK_INNERTUBE_OK });

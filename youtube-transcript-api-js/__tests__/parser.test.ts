@@ -123,6 +123,32 @@ describe('TranscriptParser', () => {
         expect(snippets[0]!.text).toContain('<b>');
         expect(snippets[0]!.text).toContain('</b>');
       });
+
+      it('should keep text inside a non-formatting tag when preserveFormatting is true', async () => {
+        const parser = new TranscriptParser(true);
+        const xml = `<?xml version="1.0" encoding="utf-8" ?>
+<transcript>
+  <text start="0" dur="2.5">&lt;a href="https://x.test"&gt;click here&lt;/a&gt; and &lt;b&gt;bold&lt;/b&gt;</text>
+  <text start="2.5" dur="2.5">Normal</text>
+</transcript>`;
+        const snippets = await parser.parse(xml);
+
+        expect(snippets[0]!.text).toContain('click here');
+        expect(snippets[0]!.text).toContain('<b>bold</b>');
+      });
+
+      it('should strip an attribute-bearing tag but keep its text when preserveFormatting is false', async () => {
+        const parser = new TranscriptParser(false);
+        const xml = `<?xml version="1.0" encoding="utf-8" ?>
+<transcript>
+  <text start="0" dur="2.5">&lt;a href="https://x.test"&gt;visible link&lt;/a&gt; text</text>
+  <text start="2.5" dur="2.5">Normal</text>
+</transcript>`;
+        const snippets = await parser.parse(xml);
+
+        expect(snippets[0]!.text).toBe('visible link text');
+        expect(snippets[0]!.text).not.toContain('<');
+      });
     });
 
     describe('special characters handling', () => {
